@@ -38,6 +38,7 @@
         const href = targetLink.getAttribute('href');
         const title = targetLink.textContent;
         const url = getDecodedURL(href);
+        links.forEach(link => link.setAttribute('href', url));
 
         if (!url) {
             console.error('Failed to decode URL:', href);
@@ -96,8 +97,7 @@
                 await delay(5000);
             }
 
-            summary = summary.replace(/\\*\\*/g, '');
-            summary = summary.replace(/。/g, '●');
+            summary = summary.replace(/\*\*/g, '').replace(/。/g, '●');
 
             let targetElement = article.querySelector('time');
             if (!targetElement) {
