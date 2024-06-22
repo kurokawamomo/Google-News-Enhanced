@@ -1,5 +1,5 @@
 (async () => {
-        const GEMINI_API_KEY = 'PASTE YOUR GOOGLE GENERATIVE LANGUAGE API KEY HERE';
+    const GEMINI_API_KEY = 'PASTE YOUR GOOGLE GENERATIVE LANGUAGE API KEY HERE';
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key=${GEMINI_API_KEY}`;
 
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
@@ -49,7 +49,7 @@
         console.log(`url: ${url}`);
 
         try {
-            await delay(2000);
+            await delay(1000);
             const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: {
@@ -109,15 +109,21 @@
             }
 
             if (targetElement.tagName === 'TIME') {
-                targetElement.textContent += ' ' + summary;
                 targetElement.style.whiteSpace = 'wrap';
                 targetElement.style.alignSelf = 'end';
                 targetElement.style.marginRight = '3px';
                 targetElement.parentElement.style.height = 'auto';
             } else if (targetElement.tagName === 'SPAN') {
-                targetElement.textContent += ' ' + summary;
                 targetElement.style.marginRight = '-60px';
             }
+            let displayText = targetElement.textContent + ' ';
+            for (const char of summary) {
+                displayText += char + '●';
+                targetElement.textContent = displayText;
+                await delay(1);
+                displayText = displayText.slice(0, -1);
+            }
+            targetElement.textContent = displayText;
         } catch (error) {
             await delay(5000);
             console.error('Error:', error);
