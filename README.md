@@ -1,9 +1,10 @@
 # Google-News-Enchanced
 Google News with AI-Generated Annotation via Gemini
 
-## Screen Shot
+## Screen Shots
 
 ![Screenshot](https://github.com/kurokawamomo/Google-News-Enchanced/assets/2446050/b3b49ce7-11ff-476f-be48-35829d0cc7dd)
+![Screenshot 2024-06-23 at 3 39 05](https://github.com/kurokawamomo/Google-News-Enchanced/assets/2446050/49322354-3a58-412b-a1b0-dfa1e61e33ee)
 
 ## Usage
 
