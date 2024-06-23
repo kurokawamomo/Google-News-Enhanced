@@ -39,7 +39,7 @@
                         -webkit-text-fill-color: transparent; 
                         background: linear-gradient(to right, #4698e2, #c6657b); 
                         width: fit-content;' id='gemini-highlight-header'>
-                        ⟡ Geminiによるハイライト
+                        ✦ Geminiによるハイライト
                     </div>
                      <div style='
                         background-color: ${backgroundColor}; 
