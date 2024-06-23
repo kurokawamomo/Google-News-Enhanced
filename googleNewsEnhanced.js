@@ -102,7 +102,7 @@
         }
     };
 
-    const processArticle = async (article, title, url) => {
+    const processArticle = async (article, links, title, url) => {
         try {
             const response = await fetch(apiUrl, {
                 method: 'POST',
@@ -133,8 +133,9 @@
 
             const data = JSON.parse(result);
             let summary = (data.candidates[0]?.content?.parts[0]?.text || '').replace(/\*\*/g, '').replace(/##/g, '');
+            console.log(`summary: ${summary}`)
 
-            let targetElement = article.querySelector('time') || targetLink.nextElementSibling;
+            let targetElement = article.querySelector('time') || article.querySelector('span');
             if (!targetElement || (targetElement.tagName !== 'TIME' && targetElement.tagName !== 'SPAN')) return;
             if (targetElement.tagName === 'TIME') {
                 targetElement.style.whiteSpace = 'wrap';
@@ -144,6 +145,8 @@
             } else {
                 targetElement.style.marginRight = '-60px';
             }
+            links.forEach(link => link.setAttribute('href', url));
+
             let displayText = targetElement.textContent + ' ';
             for (const char of summary) {
                 displayText += char + '●';
@@ -158,31 +161,38 @@
         }
     };
 
-    const articles = Array.from(document.querySelectorAll('article'));
-    for (let i = 0; i < articles.length; i++) {
-        const article = articles[i];
-        const links = Array.from(article.querySelectorAll('a[href*="./articles/"]'));
-        const targetLink = links.length > 1 ? links[links.length - 1] : links[0];
-        if (!targetLink) continue;
+    await delay(2000);
+    for (let j = 0; j < 20 ; j++) {
+        const articles = Array.from(document.querySelectorAll('article'));
+        const allLinks = Array.from(document.querySelectorAll('a[href*="./articles/"]'));
+        if (allLinks.length == 0) break;
+        for (let i = 0; i < articles.length; i++) {
+            const article = articles[i];
+            const links = Array.from(article.querySelectorAll('a[href*="./articles/"]'));
+            const targetLink = links.length > 1 ? links[links.length - 1] : links[0];
+            if (!targetLink) continue;
 
-        const href = targetLink.getAttribute('href');
-        const title = targetLink.textContent;
-        const url = getDecodedURL(href);
-        links.forEach(link => link.setAttribute('href', url));
-        if (!url) continue;
+            const href = targetLink.getAttribute('href');
+            const title = targetLink.textContent;
+            const url = getDecodedURL(href);
+            console.log(`title: ${title}`);
+            console.log(`url: ${url}`);
+            // targetLink.textContent = '✦ ' + targetLink.textContent;
+            if (!url) continue;
 
-        if (i === 10) {
-            const urls = articles.map(article => {
-                const links = Array.from(article.querySelectorAll('a[href*="./articles/"]'));
-                const targetLink = links.length > 1 ? links[links.length - 1] : links[0];
-                if (!targetLink) return null;
-                const href = targetLink.getAttribute('href');
-                const title = targetLink.textContent;
-                const url = getDecodedURL(href);
-                return `${title}: ${url}`;
-            }).filter(Boolean).join(' ');
-            await processHighlight(urls);
+            if (i === 10 && !document.querySelector('#gemini-highlight')) {
+                const urls = articles.map(article => {
+                    const links = Array.from(article.querySelectorAll('a[href*="./articles/"]'));
+                    const targetLink = links.length > 1 ? links[links.length - 1] : links[0];
+                    if (!targetLink) return null;
+                    const href = targetLink.getAttribute('href');
+                    const title = targetLink.textContent;
+                    const url = getDecodedURL(href);
+                    return `${title}: ${url}`;
+                }).filter(Boolean).join(' ');
+                await processHighlight(urls);
+            }
+            await processArticle(article, links, title, url);
         }
-        await processArticle(article, title, url);
     }
 })();
