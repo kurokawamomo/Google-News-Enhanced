@@ -96,7 +96,7 @@
                 targetElement.textContent = displayText;
                 return;
             } catch (error) {
-                await delay(5000);
+                await delay(1000);
                 console.error('Error:', error);
             }
         }
@@ -161,38 +161,45 @@
         }
     };
 
+    const throttledProcessArticle = async (article, links, title, url, interval) => {
+        await delay(interval);
+        return processArticle(article, links, title, url);
+    };
+
     await delay(2000);
-    for (let j = 0; j < 20 ; j++) {
+    for (let j = 0; j < 30 ; j++) {
         const articles = Array.from(document.querySelectorAll('article'));
         const allLinks = Array.from(document.querySelectorAll('a[href*="./articles/"]'));
         if (allLinks.length == 0) break;
-        for (let i = 0; i < articles.length; i++) {
-            const article = articles[i];
+        
+        const promises = articles.map((article, i) => {
             const links = Array.from(article.querySelectorAll('a[href*="./articles/"]'));
             const targetLink = links.length > 1 ? links[links.length - 1] : links[0];
-            if (!targetLink) continue;
+            if (!targetLink) return Promise.resolve();
 
             const href = targetLink.getAttribute('href');
             const title = targetLink.textContent;
             const url = getDecodedURL(href);
             console.log(`title: ${title}`);
             console.log(`url: ${url}`);
-            // targetLink.textContent = '✦ ' + targetLink.textContent;
-            if (!url) continue;
+            if (!url) return Promise.resolve();
 
-            if (i === 10 && !document.querySelector('#gemini-highlight')) {
-                const urls = articles.map(article => {
-                    const links = Array.from(article.querySelectorAll('a[href*="./articles/"]'));
-                    const targetLink = links.length > 1 ? links[links.length - 1] : links[0];
-                    if (!targetLink) return null;
-                    const href = targetLink.getAttribute('href');
-                    const title = targetLink.textContent;
-                    const url = getDecodedURL(href);
-                    return `${title}: ${url}`;
-                }).filter(Boolean).join(' ');
-                await processHighlight(urls);
-            }
-            await processArticle(article, links, title, url);
+            return throttledProcessArticle(article, links, title, url, i * 100);
+        });
+
+        await Promise.all(promises);
+
+        if (!document.querySelector('#gemini-highlight')) {
+            const urls = articles.map(article => {
+                const links = Array.from(article.querySelectorAll('a[href*="./articles/"]'));
+                const targetLink = links.length > 1 ? links[links.length - 1] : links[0];
+                if (!targetLink) return null;
+                const href = targetLink.getAttribute('href');
+                const title = targetLink.textContent;
+                const url = getDecodedURL(href);
+                return `${title}: ${url}`;
+            }).filter(Boolean).join(' ');
+            await processHighlight(urls);
         }
     }
 })();
