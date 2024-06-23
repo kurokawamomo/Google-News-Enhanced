@@ -78,7 +78,7 @@
                 result += decoder.decode();
 
                 const data = JSON.parse(result);
-                let summary = (data.candidates[0]?.content?.parts[0]?.text || '').replace(/\*\*/g, '').replace(/##/g, '').replace(/。/g, '●');
+                let summary = (data.candidates[0]?.content?.parts[0]?.text || '').replace(/\*\*/g, '').replace(/##/g, '');
                 insertHighlightElement();
                 let targetElement = document.querySelector('#gemini-highlight-content');
                 if (!targetElement) {
@@ -132,7 +132,7 @@
             result += decoder.decode();
 
             const data = JSON.parse(result);
-            let summary = (data.candidates[0]?.content?.parts[0]?.text || '').replace(/\*\*/g, '').replace(/##/g, '').replace(/。/g, '●');
+            let summary = (data.candidates[0]?.content?.parts[0]?.text || '').replace(/\*\*/g, '').replace(/##/g, '');
 
             let targetElement = article.querySelector('time') || targetLink.nextElementSibling;
             if (!targetElement || (targetElement.tagName !== 'TIME' && targetElement.tagName !== 'SPAN')) return;
