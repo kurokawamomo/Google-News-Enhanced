@@ -19,8 +19,8 @@
     const insertHighlightElement = () => {
         const cWizElements = document.querySelectorAll('main>c-wiz>c-wiz, main>div>c-wiz, main>div>div>c-wiz');
         const validHolders = Array.from(document.querySelectorAll('c-wiz>section, c-wiz>section>div>div')).filter(element => {
-              const backgroundColor = getComputedStyle(element).backgroundColor;
-              return backgroundColor !== 'rgba(0, 0, 0, 0)' && backgroundColor !== 'transparent';         
+            const backgroundColor = getComputedStyle(element).backgroundColor;
+            return backgroundColor !== 'rgba(0, 0, 0, 0)' && backgroundColor !== 'transparent';         
         });
         if (cWizElements.length >= 2) {
             const targetInsertPosition = cWizElements[1];
@@ -104,6 +104,7 @@
 
     const processArticle = async (article, links, title, url) => {
         try {
+            document.querySelector('#gemini-ticker').style.opacity = '1';
             const response = await fetch(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -133,7 +134,7 @@
 
             const data = JSON.parse(result);
             let summary = (data.candidates[0]?.content?.parts[0]?.text || '').replace(/\*\*/g, '').replace(/##/g, '');
-            console.log(`summary: ${summary}`)
+            console.log(`summary: ${summary}`);
 
             let targetElement = article.querySelector('time') || article.querySelector('span');
             if (!targetElement || (targetElement.tagName !== 'TIME' && targetElement.tagName !== 'SPAN')) return;
@@ -149,10 +150,12 @@
 
             let displayText = targetElement.textContent + ' ';
             for (const char of summary) {
+                document.querySelector('#gemini-ticker').style.opacity = '1';
                 displayText += char + '●';
                 targetElement.textContent = displayText;
                 await delay(2);
                 displayText = displayText.slice(0, -1);
+                document.querySelector('#gemini-ticker').style.opacity = '0';
             }
             targetElement.textContent = displayText;
         } catch (error) {
@@ -167,6 +170,17 @@
     };
 
     await delay(2000);
+    const ticker = document.createElement('div');
+    ticker.id = 'gemini-ticker';
+    ticker.style.position = 'fixed';
+    ticker.style.right = '20px';
+    ticker.style.bottom = '10px';
+    ticker.style.fontSize = '1.5em';
+    ticker.style.color = '#77777777';
+    ticker.style.transition = 'opacity .3s';
+    ticker.style.zIndex = '100';
+    ticker.innerHTML = '✦';
+    document.querySelector('body').appendChild(ticker);
     for (let j = 0; j < 30 ; j++) {
         const articles = Array.from(document.querySelectorAll('article'));
         const allLinks = Array.from(document.querySelectorAll('a[href*="./articles/"]'));
