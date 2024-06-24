@@ -15,7 +15,79 @@
             return null;
         }
     };
+    
+    // ########## Forecast ##########
+    const insertForecastElement = async (forecastLink) => {
+        if (forecastLink) {
+            const forecast = document.createElement('div');
+            forecast.id = 'gemini-forecast';
+            forecast.style.maxWidth = '320px';
+            forecast.style.marginLeft = '16px';
+            forecastLink.parentElement.parentElement.appendChild(forecast);
+        }
+    };
 
+    const processForecast = async () => {
+        const forecastLink = document.querySelector('a[href*="https://weathernews.jp/"]') || 
+            document.querySelector('a[href*="https://weather.com/"]');
+        const geo = forecastLink.parentElement.firstChild.textContent || '全国' ;
+        console.log(`forecast: ${geo}`)
+        for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+                document.querySelector('#gemini-ticker').style.opacity = '1';
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: `${geo}の今後の天気について100字ほどで概要を教えて下さい。`
+                            }],
+                        }]
+                    }),
+                });
+
+                if (!response.ok) throw new Error('Network response was not ok');
+
+                const reader = response.body.getReader();
+                let result = '', done = false, decoder = new TextDecoder();
+                while (!done) {
+                    const { value, done: doneReading } = await reader.read();
+                    done = doneReading;
+                    if (value) result += decoder.decode(value, { stream: true });
+                }
+                result += decoder.decode();
+
+                const data = JSON.parse(result);
+                let summary = (data.candidates[0]?.content?.parts[0]?.text || '').replace(/\*\*/g, '').replace(/##/g, '');
+                console.log(`forecast: ${summary}`);
+
+                insertForecastElement(forecastLink);
+                let targetElement = document.querySelector('#gemini-forecast');
+                if (!targetElement) {
+                    console.error('No target element found for summary insertion');
+                    return;
+                }
+
+                let displayText = targetElement.textContent + ' ';
+                for (const char of summary) {
+                    document.querySelector('#gemini-ticker').style.opacity = '1';
+                    displayText += char + '●';
+                    targetElement.textContent = displayText;
+                    await delay(2);
+                    displayText = displayText.slice(0, -1);
+                    document.querySelector('#gemini-ticker').style.opacity = '0';
+                }
+                targetElement.textContent = displayText;
+                return;
+            } catch (error) {
+                await delay(5000);
+                console.error('Error:', error);
+            }
+        }
+    };
+
+    // ########## Highlight ##########
     const insertHighlightElement = () => {
         const cWizElements = document.querySelectorAll('main>c-wiz>c-wiz, main>div>c-wiz, main>div>div>c-wiz');
         const validHolders = Array.from(document.querySelectorAll('c-wiz>section, c-wiz>section>div>div')).filter(element => {
@@ -54,6 +126,7 @@
     const processHighlight = async (urls) => {
         for (let attempt = 0; attempt < 3; attempt++) {
             try {
+                document.querySelector('#gemini-ticker').style.opacity = '1';
                 const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -79,6 +152,8 @@
 
                 const data = JSON.parse(result);
                 let summary = (data.candidates[0]?.content?.parts[0]?.text || '').replace(/\*\*/g, '').replace(/##/g, '');
+                console.log(`highlights: ${summary}`);
+
                 insertHighlightElement();
                 let targetElement = document.querySelector('#gemini-highlight-content');
                 if (!targetElement) {
@@ -88,20 +163,23 @@
             
                 let displayText = targetElement.textContent + ' ';
                 for (const char of summary) {
+                    document.querySelector('#gemini-ticker').style.opacity = '1';
                     displayText += char + '●';
                     targetElement.textContent = displayText;
                     await delay(2);
                     displayText = displayText.slice(0, -1);
+                    document.querySelector('#gemini-ticker').style.opacity = '0';
                 }
                 targetElement.textContent = displayText;
                 return;
             } catch (error) {
-                await delay(1000);
+                await delay(5000);
                 console.error('Error:', error);
             }
         }
     };
 
+    // ########## Article ##########
     const processArticle = async (article, links, title, url) => {
         try {
             document.querySelector('#gemini-ticker').style.opacity = '1';
@@ -169,23 +247,36 @@
         return processArticle(article, links, title, url);
     };
 
-    await delay(2000);
-    const ticker = document.createElement('div');
-    ticker.id = 'gemini-ticker';
-    ticker.style.position = 'fixed';
-    ticker.style.right = '20px';
-    ticker.style.bottom = '10px';
-    ticker.style.fontSize = '1.5em';
-    ticker.style.color = '#77777777';
-    ticker.style.transition = 'opacity .3s';
-    ticker.style.zIndex = '100';
-    ticker.innerHTML = '✦';
-    document.querySelector('body').appendChild(ticker);
+    // ########## Ticker ##########
+    const insertTickerElement = () => {
+        const ticker = document.createElement('div');
+        ticker.id = 'gemini-ticker';
+        ticker.style.position = 'fixed';
+        ticker.style.right = '20px';
+        ticker.style.bottom = '10px';
+        ticker.style.fontSize = '1.5em';
+        ticker.style.color = '#77777777';
+        ticker.style.transition = 'opacity .3s';
+        ticker.style.zIndex = '100';
+        ticker.innerHTML = '✦';
+        document.querySelector('body').appendChild(ticker);
+    };
+
+    // ########## Main ##########
+    await delay(1000);
+    insertTickerElement();
     for (let j = 0; j < 30 ; j++) {
+        console.log(`######## attempt: ${j+1} ########`)
         const articles = Array.from(document.querySelectorAll('article'));
+        
+        if (!document.querySelector('#gemini-forecast')) {
+            await processForecast();
+            await delay(1000);
+        }
+        
         const allLinks = Array.from(document.querySelectorAll('a[href*="./articles/"]'));
         if (allLinks.length == 0) break;
-        
+
         const promises = articles.map((article, i) => {
             const links = Array.from(article.querySelectorAll('a[href*="./articles/"]'));
             const targetLink = links.length > 1 ? links[links.length - 1] : links[0];
@@ -198,11 +289,11 @@
             console.log(`url: ${url}`);
             if (!url) return Promise.resolve();
 
-            return throttledProcessArticle(article, links, title, url, i * 100);
+            return throttledProcessArticle(article, links, title, url, i * 1000);
         });
 
         await Promise.all(promises);
-
+        
         if (!document.querySelector('#gemini-highlight')) {
             const urls = articles.map(article => {
                 const links = Array.from(article.querySelectorAll('a[href*="./articles/"]'));
@@ -213,7 +304,12 @@
                 const url = getDecodedURL(href);
                 return `${title}: ${url}`;
             }).filter(Boolean).join(' ');
+            console.log(`highlight: ${urls}`)
             await processHighlight(urls);
+            await delay(1000);
         }
+
+        document.querySelector('#gemini-ticker').style.opacity = '0';
     }
+    document.querySelector('#gemini-ticker').style.opacity = '0';
 })();
