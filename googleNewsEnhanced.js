@@ -4,9 +4,10 @@
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
     const getDecodedURL = (href) => {
+        hrefParam = href.replace('./articles/', '').split('?')[0].split('_')[1];
         href = href.replace('./articles/', '').split('?')[0].split('_')[0];
         try {
-            let decoded = atob(href);
+            let decoded = hrefParam ? atob(href) + '?' + atob(hrefParam) : atob(href);
             const indexOfStartString = decoded.indexOf('http');
             const indexOfEndChar = decoded.indexOf('Ò') === -1 ? decoded.length : decoded.indexOf('Ò');
             if (indexOfEndChar < 5) return null;
