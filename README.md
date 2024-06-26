@@ -1,4 +1,4 @@
-# Google-News-Enchanced
+# Google-News-Enhanced
 Google News with AI-Generated Annotation via Gemini
 
 ## Screen Shots
@@ -8,6 +8,9 @@ Google News with AI-Generated Annotation via Gemini
 
 ## Usage
 
-- Google-News-Enchanced was written by js; it should work on i.e. [GreaseMonkey](https://addons.mozilla.org/ja/firefox/addon/greasemonkey/), [UserScripts](https://apps.apple.com/jp/app/userscripts/id1463298887) or AppleScript
+- Google-News-Enhanced was written by js; it should work on i.e. [GreaseMonkey](https://addons.mozilla.org/ja/firefox/addon/greasemonkey/), [UserScripts](https://apps.apple.com/jp/app/userscripts/id1463298887) or AppleScript
 - Get Generative Language Client API key from [Google AI Studio](https://aistudio.google.com/app/apikey)
 
+## Notice
+
+- If you allow location access, it will use BigDataCloud to obtain the city name. This information will not be used for anything other than to obtain weather information.
