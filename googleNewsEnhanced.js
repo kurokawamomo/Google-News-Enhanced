@@ -68,11 +68,11 @@
         const forecastLink = document.querySelector('a[href*="https://weathernews.jp/"]') || 
             document.querySelector('a[href*="https://weather.com/"]');
         if (!forecastLink) return;
-        const position = await getCurrentPosition();
-        const latitude = position.coords.latitude;
-        const longitude = position.coords.longitude;
         let geo = '全国' ;
         try {
+            const position = await getCurrentPosition();
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
             geo = await getCity(position);
         } catch (error) {
             geo = '全国' ;
