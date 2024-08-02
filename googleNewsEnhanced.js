@@ -4,16 +4,17 @@
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
     const getDecodedURL = (href) => {
-        hrefParam = href.replace('./articles/', '').split('?')[0].split('_')[1];
-        href = href.replace('./articles/', '').split('?')[0].split('_')[0];
+        hrefParam = href.replace('./read/', '').split('?')[0].split('_')[1];
+        href = href.replace('./read/', '').split('?')[0].split('_')[0];
         try {
             let decoded = hrefParam ? atob(href) + '?' + atob(hrefParam) : atob(href);
             const indexOfStartString = decoded.indexOf('http');
             const indexOfEndChar = decoded.indexOf('Ò') === -1 ? decoded.length : decoded.indexOf('Ò');
             if (indexOfEndChar < 5) return null;
             return decoded.substring(indexOfStartString, indexOfEndChar);
-        } catch (e) {
+        } catch (error) {
             document.querySelector('#gemini-ticker').style.opacity = '0';
+            console.error("URL decode error", error);
             return null;
         }
     };
@@ -69,15 +70,19 @@
             document.querySelector('a[href*="https://weather.com/"]');
         if (!forecastLink) return;
         let geo = '全国' ;
+        let latitude = null;
+        let longitude = null;
         try {
             const position = await getCurrentPosition();
-            const latitude = position.coords.latitude;
-            const longitude = position.coords.longitude;
+            if (position && position.coords && position.coords.latitude && position.coords.longitude) {
+                latitude = position.coords.latitude;
+                longitude = position.coords.longitude;
+            }
             geo = await getCity(position);
         } catch (error) {
             geo = '全国' ;
         }
-        console.log(`forecast: ${geo}`)
+        console.log(`forecast: ${geo}`);
         for (let attempt = 0; attempt < 3; attempt++) {
             try {
                 document.querySelector('#gemini-ticker').style.opacity = '1';
@@ -304,7 +309,7 @@
         await delay(interval);
         return processArticle(article, links, title, url);
     };
-
+    
     // ########## Ticker ##########
     const insertTickerElement = () => {
         if (document.querySelector('#gemini-ticker')) return;
@@ -334,11 +339,11 @@
             await delay(1000);
         }
         
-        const allLinks = Array.from(document.querySelectorAll('a[href*="./articles/"]'));
+        const allLinks = Array.from(document.querySelectorAll('a[href*="./read/"]'));
         if (allLinks.length == 0) break;
 
         const promises = articles.map((article, i) => {
-            const links = Array.from(article.querySelectorAll('a[href*="./articles/"]'));
+            const links = Array.from(article.querySelectorAll('a[href*="./read/"]'));
             const targetLink = links.length > 1 ? links[links.length - 1] : links[0];
             if (!targetLink) return Promise.resolve();
 
@@ -349,14 +354,14 @@
             console.log(`url: ${url}`);
             if (!url) return Promise.resolve();
 
-            return throttledProcessArticle(article, links, title, url, i * 1000);
+            return throttledProcessArticle(article, links, title, url, i * 5000);
         });
 
         await Promise.all(promises);
         
         if (!document.querySelector('#gemini-highlight')) {
             const urls = articles.map(article => {
-                const links = Array.from(article.querySelectorAll('a[href*="./articles/"]'));
+                const links = Array.from(article.querySelectorAll('a[href*="./read/"]'));
                 const targetLink = links.length > 1 ? links[links.length - 1] : links[0];
                 if (!targetLink) return null;
                 const href = targetLink.getAttribute('href');
