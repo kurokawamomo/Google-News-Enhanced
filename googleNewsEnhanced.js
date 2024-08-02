@@ -277,14 +277,24 @@
             console.log(`summary: ${summary}`);
 
             let targetElement = article.querySelector('time') || article.querySelector('span');
-            if (!targetElement || (targetElement.tagName !== 'TIME' && targetElement.tagName !== 'SPAN')) return;
+            if (!targetElement || !targetElement.tagName) {
+                const targetLinks = article.querySelectorAll('a[href*="./read/"]');
+                const targetLink = targetLinks.length > 1 ? targetLinks[targetLinks.length - 1] : targetLinks[0];
+                const targetElement = document.createElement('span');
+                targetElement.style.fontSize = '12px';
+                targetElement.style.fontWeight = '200';
+                targetElement.style.marginRight = '-90px';
+                targetLink.parentElement.appendChild(targetElement);
+            }
+            
             if (targetElement.tagName === 'TIME') {
-                targetElement.style.whiteSpace = 'wrap';
+                targetElement.style.whiteSpace = 'pre-wrap';
                 targetElement.style.alignSelf = 'end';
                 targetElement.style.marginRight = '3px';
                 targetElement.parentElement.style.height = 'auto';
             } else {
                 targetElement.style.marginRight = '-60px';
+                targetElement.style.whiteSpace = 'pre-wrap';
             }
             links.forEach(link => link.setAttribute('href', url));
 
