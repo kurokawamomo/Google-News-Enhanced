@@ -277,7 +277,7 @@
             console.log(`summary: ${summary}`);
 
             let targetElement = article.querySelector('time') || article.querySelector('span');
-            if (!targetElement || targetElement.tagName) {
+            if (!targetElement || !targetElement.tagName) {
                 const targetLinks = article.querySelectorAll('a[href*="./read/"]');
                 const targetLink = targetLinks.length > 1 ? targetLinks[targetLinks.length - 1] : targetLinks[0];
                 const targetElement = document.createElement('span');
@@ -294,6 +294,7 @@
                 targetElement.parentElement.style.height = 'auto';
             } else {
                 targetElement.style.marginRight = '-60px';
+                targetElement.style.whiteSpace = 'wrap';
             }
             links.forEach(link => link.setAttribute('href', url));
 
