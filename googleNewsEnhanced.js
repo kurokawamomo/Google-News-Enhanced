@@ -288,13 +288,13 @@
             }
             
             if (targetElement.tagName === 'TIME') {
-                targetElement.style.whiteSpace = 'wrap';
+                targetElement.style.whiteSpace = 'pre-wrap';
                 targetElement.style.alignSelf = 'end';
                 targetElement.style.marginRight = '3px';
                 targetElement.parentElement.style.height = 'auto';
             } else {
                 targetElement.style.marginRight = '-60px';
-                targetElement.style.whiteSpace = 'wrap';
+                targetElement.style.whiteSpace = 'pre-wrap';
             }
             links.forEach(link => link.setAttribute('href', url));
 
