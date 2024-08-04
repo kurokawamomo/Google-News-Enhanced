@@ -31,7 +31,9 @@
             const response = await sendPostRequest(endPoint, param);
             const indexOfStartString = response.indexOf('http');
             const lengthOfURL = response.substring(indexOfStartString).indexOf('\\');
-            return response.substring(indexOfStartString, indexOfStartString + lengthOfURL);
+            return response.substring(indexOfStartString, indexOfStartString + lengthOfURL)
+                .replace(/\\\\u([a-fA-F0-9]{4})/g, (s, g) => String.fromCharCode(parseInt(g, 16)))
+                .replace(/\\u([a-fA-F0-9]{4})/g, (s, g) => String.fromCharCode(parseInt(g, 16)));
         } catch (error) {
             document.querySelector('#gemini-ticker').style.opacity = '0';
             console.error("URL decode error", error);
@@ -116,9 +118,9 @@
                             1 URLにアクセス出来なかった場合、結果を出力しない
                             2 ${(new Date).toString()}の天気に関する情報を抽出
                             3 どのように過ごすべきかを含め、200字程度に具体的に要約
-                            4 結果のみ出力
+                            4 タイトルや見出しを含めず、結果のみ出力
                             ${geo}の情報: https://weathernews.jp/onebox/${latitude}/${longitude}/
-                            あなた: 結果(要約の内容):`
+                            あなた:`
                             }],
                         }]
                     }),
@@ -275,9 +277,9 @@
                             text: `私: URLに対し、次の手順に従ってステップバイステップで実行してください。
                             1 URLにアクセス出来なかった場合、結果を出力しない
                             2 200字程度に学者のように具体的に要約
-                            3 結果のみを出力
+                            3 タイトルや見出しを含めず、結果のみを出力
                             ${title}のURL: ${url}
-                            あなた: 結果(要約の内容):`
+                            あなた:`
                         }],
                     }]
                 }),
