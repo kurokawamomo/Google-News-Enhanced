@@ -112,12 +112,13 @@
                     body: JSON.stringify({
                         contents: [{
                             parts: [{
-                                text: `URLに対し、次の手順に従ってステップバイステップで実行してください。
+                                text: `私: URLに対し、次の手順に従ってステップバイステップで実行してください。
                             1 URLにアクセス出来なかった場合、結果を出力しない
                             2 ${(new Date).toString()}の天気に関する情報を抽出
                             3 どのように過ごすべきかを含め、200字程度に具体的に要約
                             4 結果のみ出力
-                            ${geo}の情報: https://weathernews.jp/onebox/${latitude}/${longitude}/`
+                            ${geo}の情報: https://weathernews.jp/onebox/${latitude}/${longitude}/
+                            あなた: 結果(要約の内容):`
                             }],
                         }]
                     }),
@@ -271,11 +272,12 @@
                 body: JSON.stringify({
                     contents: [{
                         parts: [{
-                            text: `URLに対し、次の手順に従ってステップバイステップで実行してください。
+                            text: `私: URLに対し、次の手順に従ってステップバイステップで実行してください。
                             1 URLにアクセス出来なかった場合、結果を出力しない
                             2 200字程度に学者のように具体的に要約
                             3 結果のみを出力
-                            ${title}のURL: ${url}`
+                            ${title}のURL: ${url}
+                            あなた: 結果(要約の内容):`
                         }],
                     }]
                 }),
@@ -368,11 +370,29 @@
             await processForecast();
             await delay(1000);
         }
-        
+
+        let urls = [];
+        if (!document.querySelector('#gemini-highlight')) {
+            const promiseHighlight = articles.map(async article => {
+                const links = Array.from(article.querySelectorAll('a[href*="./read/"]'));
+                const targetLink = links.length > 1 ? links[links.length - 1] : links[0];
+                if (!targetLink) return Promise.resolve();
+                const href = targetLink.getAttribute('href');
+                const title = targetLink.textContent;
+                const url = await getExtractedURL(href);
+                urls.push(`${title}: ${url}`);
+            })
+            await Promise.all(promiseHighlight);
+            urls = urls.filter(Boolean).join(' ');
+            console.log(`highlight: ${urls}`)
+            await processHighlight(urls);
+            await delay(1000);
+        }
+
         const allLinks = Array.from(document.querySelectorAll('a[href*="./read/"]'));
         if (allLinks.length == 0) break;
 
-        const promises = articles.map(async (article, i) => {
+        const promiseArticles = articles.map(async (article, i) => {
             const links = Array.from(article.querySelectorAll('a[href*="./read/"]'));
             const targetLink = links.length > 1 ? links[links.length - 1] : links[0];
             if (!targetLink) return Promise.resolve();
@@ -387,22 +407,7 @@
             return throttledProcessArticle(article, links, title, url, i * 500);
         });
 
-        await Promise.all(promises);
-        
-        if (!document.querySelector('#gemini-highlight')) {
-            const urls = articles.map(async article => {
-                const links = Array.from(article.querySelectorAll('a[href*="./read/"]'));
-                const targetLink = links.length > 1 ? links[links.length - 1] : links[0];
-                if (!targetLink) return null;
-                const href = targetLink.getAttribute('href');
-                const title = targetLink.textContent;
-                const url = await getExtractedURL(href);
-                return `${title}: ${url}`;
-            }).filter(Boolean).join(' ');
-            console.log(`highlight: ${urls}`)
-            await processHighlight(urls);
-            await delay(1000);
-        }
+        await Promise.all(promiseArticles);
 
         document.querySelector('#gemini-ticker').style.opacity = '0';
         await delay(1000);
