@@ -3,22 +3,60 @@
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-    const getDecodedURL = (href) => {
-        hrefParam = href.replace('./read/', '').split('?')[0].split('_')[1];
+    // ########## Extract URL ##########
+    function sendPostRequest(endPoint, param) {
+        return new Promise((resolve, reject) => {
+            var xhr = new XMLHttpRequest();
+
+            xhr.open("POST", endPoint, true);
+            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        resolve(xhr.responseText);
+                    } else if (xhr.status === 400) {
+                        reject(Error(xhr.responseText));
+                    } else {
+                        reject(new Error("Request failed with status " + xhr.status + ": " + xhr.statusText));
+                    }
+                }
+            };
+            xhr.send(param);
+        });
+    }
+
+    const getAtParam = async () => {
+        try {
+            const endPoint = `/_/DotsSplashUi/data/batchexecute?source-path=%2Fread%2F`;
+            const param = `f.req=%5B%5B%5B%22Fbv4je%22%2C%22%5B%5C%22garturlreq%5C%22%2C%5B%5B%5C%22en%5C%22%2C%5C%22US%5C%22%2C%5B%5C%22FINANCE_TOP_INDICES%5C%22%2C%5C%22WEB_TEST_1_0_0%5C%22%5D%2Cnull%2Cnull%2C1%2C1%2C%5C%22US%3Aen%5C%22%2Cnull%2C540%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2C0%2Cnull%2Cnull%2C%5B1717597091%2C738001000%5D%5D%2C%5C%22en%5C%22%2C%5C%22US%5C%22%2C1%2C%5B2%2C3%2C4%2C8%5D%2C1%2C0%2C%5C%22658136446%5C%22%2C0%2C0%2Cnull%2C0%5D%2C%5C%22%5C%22%5D%22%2Cnull%2C%22generic%22%5D%5D%5D&`
+            const response = await sendPostRequest(endPoint, param);
+            return null;
+        } catch (error) {
+            const response = error.toString();
+            const indexOfStartString = response.indexOf('xsrf') + 7;
+            const lengthOfURL = response.substring(indexOfStartString).indexOf('\",');
+            return response.substring(indexOfStartString, indexOfStartString + lengthOfURL);
+        }
+    };
+
+    const getExtractedURL = async (href, atParam) => {
         href = href.replace('./read/', '').split('?')[0].split('_')[0];
         try {
-            let decoded = hrefParam ? atob(href) + '?' + atob(hrefParam) : atob(href);
-            const indexOfStartString = decoded.indexOf('http');
-            const indexOfEndChar = decoded.indexOf('Ò') === -1 ? decoded.length : decoded.indexOf('Ò');
-            if (indexOfEndChar < 5) return null;
-            return decoded.substring(indexOfStartString, indexOfEndChar);
+            const endPoint = `/_/DotsSplashUi/data/batchexecute?source-path=%2Fread%2F${href}`;
+            const param = `f.req=%5B%5B%5B%22Fbv4je%22%2C%22%5B%5C%22garturlreq%5C%22%2C%5B%5B%5C%22en%5C%22%2C%5C%22US%5C%22%2C%5B%5C%22FINANCE_TOP_INDICES%5C%22%2C%5C%22WEB_TEST_1_0_0%5C%22%5D%2Cnull%2Cnull%2C1%2C1%2C%5C%22US%3Aen%5C%22%2Cnull%2C540%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2C0%2Cnull%2Cnull%2C%5B1717597091%2C738001000%5D%5D%2C%5C%22en%5C%22%2C%5C%22US%5C%22%2C1%2C%5B2%2C3%2C4%2C8%5D%2C1%2C0%2C%5C%22658136446%5C%22%2C0%2C0%2Cnull%2C0%5D%2C%5C%22${href}%5C%22%5D%22%2Cnull%2C%22generic%22%5D%5D%5D&at=${atParam}&`
+            const response = await sendPostRequest(endPoint, param);
+            const indexOfStartString = response.indexOf('http');
+            const lengthOfURL = response.substring(indexOfStartString).indexOf('\",') - 1;
+            return response.substring(indexOfStartString, indexOfStartString + lengthOfURL)
+                .replace(/\\\\u([a-fA-F0-9]{4})/g, (s, g) => String.fromCharCode(parseInt(g, 16)))
+                .replace(/\\u([a-fA-F0-9]{4})/g, (s, g) => String.fromCharCode(parseInt(g, 16)));
         } catch (error) {
             document.querySelector('#gemini-ticker').style.opacity = '0';
             console.error("URL decode error", error);
             return null;
         }
     };
-    
+
     // ########## Forecast ##########
     function getCurrentPosition() {
         return new Promise((resolve, reject) => {
@@ -92,12 +130,13 @@
                     body: JSON.stringify({
                         contents: [{
                             parts: [{
-                                text: `URLに対し、次の手順に従ってステップバイステップで実行してください。
+                                text: `私: URLに対し、次の手順に従ってステップバイステップで実行してください。
                             1 URLにアクセス出来なかった場合、結果を出力しない
                             2 ${(new Date).toString()}の天気に関する情報を抽出
                             3 どのように過ごすべきかを含め、200字程度に具体的に要約
-                            4 結果のみ出力
-                            ${geo}の情報: https://weathernews.jp/onebox/${latitude}/${longitude}/`
+                            4 タイトルや見出しを含めず、結果のみ出力
+                            ${geo}の情報: https://weathernews.jp/onebox/${latitude}/${longitude}/
+                            あなた:`
                             }],
                         }]
                     }),
@@ -251,11 +290,12 @@
                 body: JSON.stringify({
                     contents: [{
                         parts: [{
-                            text: `URLに対し、次の手順に従ってステップバイステップで実行してください。
+                            text: `私: URLに対し、次の手順に従ってステップバイステップで実行してください。
                             1 URLにアクセス出来なかった場合、結果を出力しない
                             2 200字程度に学者のように具体的に要約
-                            3 結果のみを出力
-                            ${title}のURL: ${url}`
+                            3 タイトルや見出しを含めず、結果のみを出力
+                            ${title}のURL: ${url}
+                            あなた:`
                         }],
                     }]
                 }),
@@ -319,7 +359,7 @@
         await delay(interval);
         return processArticle(article, links, title, url);
     };
-    
+
     // ########## Ticker ##########
     const insertTickerElement = () => {
         if (document.querySelector('#gemini-ticker')) return;
@@ -339,6 +379,8 @@
     // ########## Main ##########
     await delay(1000);
     insertTickerElement();
+    let atParam = await getAtParam();
+    console.log(`atParam: ${atParam}`)
     for (let j = 0; j < 30 ; j++) {
         console.log(`######## attempt: ${j+1} ########`)
         document.querySelector('#gemini-ticker').style.opacity = '1';
@@ -348,18 +390,36 @@
             await processForecast();
             await delay(1000);
         }
-        
+
+        let urls = [];
+        if (!document.querySelector('#gemini-highlight')) {
+            const promiseHighlight = articles.map(async article => {
+                const links = Array.from(article.querySelectorAll('a[href*="./read/"]'));
+                const targetLink = links.length > 1 ? links[links.length - 1] : links[0];
+                if (!targetLink) return Promise.resolve();
+                const href = targetLink.getAttribute('href');
+                const title = targetLink.textContent;
+                const url = await getExtractedURL(href, atParam);
+                urls.push(`${title}: ${url}`);
+            })
+            await Promise.all(promiseHighlight);
+            urls = urls.filter(Boolean).join(' ');
+            console.log(`highlight: ${urls}`)
+            await processHighlight(urls);
+            await delay(1000);
+        }
+
         const allLinks = Array.from(document.querySelectorAll('a[href*="./read/"]'));
         if (allLinks.length == 0) break;
 
-        const promises = articles.map((article, i) => {
+        const promiseArticles = articles.map(async (article, i) => {
             const links = Array.from(article.querySelectorAll('a[href*="./read/"]'));
             const targetLink = links.length > 1 ? links[links.length - 1] : links[0];
             if (!targetLink) return Promise.resolve();
 
             const href = targetLink.getAttribute('href');
             const title = targetLink.textContent;
-            const url = getDecodedURL(href);
+            const url = await getExtractedURL(href, atParam);
             console.log(`title: ${title}`);
             console.log(`url: ${url}`);
             if (!url) return Promise.resolve();
@@ -367,22 +427,7 @@
             return throttledProcessArticle(article, links, title, url, i * 500);
         });
 
-        await Promise.all(promises);
-        
-        if (!document.querySelector('#gemini-highlight')) {
-            const urls = articles.map(article => {
-                const links = Array.from(article.querySelectorAll('a[href*="./read/"]'));
-                const targetLink = links.length > 1 ? links[links.length - 1] : links[0];
-                if (!targetLink) return null;
-                const href = targetLink.getAttribute('href');
-                const title = targetLink.textContent;
-                const url = getDecodedURL(href);
-                return `${title}: ${url}`;
-            }).filter(Boolean).join(' ');
-            console.log(`highlight: ${urls}`)
-            await processHighlight(urls);
-            await delay(1000);
-        }
+        await Promise.all(promiseArticles);
 
         document.querySelector('#gemini-ticker').style.opacity = '0';
         await delay(1000);
