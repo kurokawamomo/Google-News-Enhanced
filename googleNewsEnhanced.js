@@ -14,6 +14,8 @@
                 if (xhr.readyState === 4) {
                     if (xhr.status === 200) {
                         resolve(xhr.responseText);
+                    } else if (xhr.status === 400) {
+                        reject(Error(xhr.responseText));
                     } else {
                         reject(new Error("Request failed with status " + xhr.status + ": " + xhr.statusText));
                     }
@@ -23,6 +25,20 @@
         });
     }
 
+    const getAtParam = async () => {
+        try {
+            const endPoint = `/_/DotsSplashUi/data/batchexecute?source-path=%2Fread%2F`;
+            const param = `f.req=%5B%5B%5B%22Fbv4je%22%2C%22%5B%5C%22garturlreq%5C%22%2C%5B%5B%5C%22en%5C%22%2C%5C%22US%5C%22%2C%5B%5C%22FINANCE_TOP_INDICES%5C%22%2C%5C%22WEB_TEST_1_0_0%5C%22%5D%2Cnull%2Cnull%2C1%2C1%2C%5C%22US%3Aen%5C%22%2Cnull%2C540%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2C0%2Cnull%2Cnull%2C%5B1717597091%2C738001000%5D%5D%2C%5C%22en%5C%22%2C%5C%22US%5C%22%2C1%2C%5B2%2C3%2C4%2C8%5D%2C1%2C0%2C%5C%22658136446%5C%22%2C0%2C0%2Cnull%2C0%5D%2C%5C%22%5C%22%5D%22%2Cnull%2C%22generic%22%5D%5D%5D&`
+            const response = await sendPostRequest(endPoint, param);
+            return null;
+        } catch (error) {
+            const response = error.toString();
+            const indexOfStartString = response.indexOf('xsrf') + 7;
+            const lengthOfURL = response.substring(indexOfStartString).indexOf('\",');
+            return response.substring(indexOfStartString, indexOfStartString + lengthOfURL);
+        }
+    };
+
     const getExtractedURL = async (href, atParam) => {
         href = href.replace('./read/', '').split('?')[0].split('_')[0];
         try {
@@ -30,7 +46,7 @@
             const param = `f.req=%5B%5B%5B%22Fbv4je%22%2C%22%5B%5C%22garturlreq%5C%22%2C%5B%5B%5C%22en%5C%22%2C%5C%22US%5C%22%2C%5B%5C%22FINANCE_TOP_INDICES%5C%22%2C%5C%22WEB_TEST_1_0_0%5C%22%5D%2Cnull%2Cnull%2C1%2C1%2C%5C%22US%3Aen%5C%22%2Cnull%2C540%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2C0%2Cnull%2Cnull%2C%5B1717597091%2C738001000%5D%5D%2C%5C%22en%5C%22%2C%5C%22US%5C%22%2C1%2C%5B2%2C3%2C4%2C8%5D%2C1%2C0%2C%5C%22658136446%5C%22%2C0%2C0%2Cnull%2C0%5D%2C%5C%22${href}%5C%22%5D%22%2Cnull%2C%22generic%22%5D%5D%5D&at=${atParam}&`
             const response = await sendPostRequest(endPoint, param);
             const indexOfStartString = response.indexOf('http');
-            const lengthOfURL = response.substring(indexOfStartString).indexOf('\\');
+            const lengthOfURL = response.substring(indexOfStartString).indexOf('\",');
             return response.substring(indexOfStartString, indexOfStartString + lengthOfURL)
                 .replace(/\\\\u([a-fA-F0-9]{4})/g, (s, g) => String.fromCharCode(parseInt(g, 16)))
                 .replace(/\\u([a-fA-F0-9]{4})/g, (s, g) => String.fromCharCode(parseInt(g, 16)));
@@ -363,8 +379,7 @@
     // ########## Main ##########
     await delay(1000);
     insertTickerElement();
-    const regex = /[A-Za-z0-9_-]{25,35}:[0-9]{10,15}/;
-    const atParam = document.querySelector('head>script[data-id]').textContent.match(regex)
+    let atParam = await getAtParam();
     console.log(`atParam: ${atParam}`)
     for (let j = 0; j < 30 ; j++) {
         console.log(`######## attempt: ${j+1} ########`)
