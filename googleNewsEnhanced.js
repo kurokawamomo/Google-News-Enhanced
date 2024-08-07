@@ -23,11 +23,11 @@
         });
     }
 
-    const getExtractedURL = async (href) => {
+    const getExtractedURL = async (href, atParam) => {
         href = href.replace('./read/', '').split('?')[0].split('_')[0];
         try {
             const endPoint = `/_/DotsSplashUi/data/batchexecute?source-path=%2Fread%2F${href}`;
-            const param = `f.req=%5B%5B%5B%22Fbv4je%22%2C%22%5B%5C%22garturlreq%5C%22%2C%5B%5B%5C%22en%5C%22%2C%5C%22US%5C%22%2C%5B%5C%22FINANCE_TOP_INDICES%5C%22%2C%5C%22WEB_TEST_1_0_0%5C%22%5D%2Cnull%2Cnull%2C1%2C1%2C%5C%22US%3Aen%5C%22%2Cnull%2C540%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2C0%2Cnull%2Cnull%2C%5B1717597091%2C738001000%5D%5D%2C%5C%22en%5C%22%2C%5C%22US%5C%22%2C1%2C%5B2%2C3%2C4%2C8%5D%2C1%2C0%2C%5C%22658136446%5C%22%2C0%2C0%2Cnull%2C0%5D%2C%5C%22${href}%5C%22%5D%22%2Cnull%2C%22generic%22%5D%5D%5D&at=AHVjzVnoOJYSDNuJfCiZI3qZPAav%3A1722709886831&`
+            const param = `f.req=%5B%5B%5B%22Fbv4je%22%2C%22%5B%5C%22garturlreq%5C%22%2C%5B%5B%5C%22en%5C%22%2C%5C%22US%5C%22%2C%5B%5C%22FINANCE_TOP_INDICES%5C%22%2C%5C%22WEB_TEST_1_0_0%5C%22%5D%2Cnull%2Cnull%2C1%2C1%2C%5C%22US%3Aen%5C%22%2Cnull%2C540%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2C0%2Cnull%2Cnull%2C%5B1717597091%2C738001000%5D%5D%2C%5C%22en%5C%22%2C%5C%22US%5C%22%2C1%2C%5B2%2C3%2C4%2C8%5D%2C1%2C0%2C%5C%22658136446%5C%22%2C0%2C0%2Cnull%2C0%5D%2C%5C%22${href}%5C%22%5D%22%2Cnull%2C%22generic%22%5D%5D%5D&at=${atParam}&`
             const response = await sendPostRequest(endPoint, param);
             const indexOfStartString = response.indexOf('http');
             const lengthOfURL = response.substring(indexOfStartString).indexOf('\\');
@@ -363,6 +363,9 @@
     // ########## Main ##########
     await delay(1000);
     insertTickerElement();
+    const regex = /[A-Za-z0-9_-]{25,35}:[0-9]{10,15}/;
+    const atParam = document.querySelector('head>script[data-id]').textContent.match(regex)
+    console.log(`atParam: ${atParam}`)
     for (let j = 0; j < 30 ; j++) {
         console.log(`######## attempt: ${j+1} ########`)
         document.querySelector('#gemini-ticker').style.opacity = '1';
@@ -381,7 +384,7 @@
                 if (!targetLink) return Promise.resolve();
                 const href = targetLink.getAttribute('href');
                 const title = targetLink.textContent;
-                const url = await getExtractedURL(href);
+                const url = await getExtractedURL(href, atParam);
                 urls.push(`${title}: ${url}`);
             })
             await Promise.all(promiseHighlight);
@@ -401,7 +404,7 @@
 
             const href = targetLink.getAttribute('href');
             const title = targetLink.textContent;
-            const url = await getExtractedURL(href);
+            const url = await getExtractedURL(href, atParam);
             console.log(`title: ${title}`);
             console.log(`url: ${url}`);
             if (!url) return Promise.resolve();
