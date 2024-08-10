@@ -1,5 +1,21 @@
+// ==UserScript==
+// @match           https://news.google.com/*
+// @name            Google News Enhanced via Gemini AI
+// @version         1.5
+// @license         MIT
+// @namespace       djshigel
+// @description  Google News with AI-Generated Annotation via Gemini https://github.com/kurokawamomo/Google-News-Enhanced
+// @run-at          document-end
+// @grant           GM.setValue
+// @grant           GM.getValue
+// ==/UserScript==
+
 (async () => {
-    const GEMINI_API_KEY = 'PASTE YOUR GOOGLE GENERATIVE LANGUAGE API KEY HERE';
+    let GEMINI_API_KEY = await GM.getValue("GEMINI_API_KEY") ;
+    if (!Object.keys(GEMINI_API_KEY).length) {
+        GEMINI_API_KEY = window.prompt('Get Generative Language Client API key from Google AI Studio\nhttps://ai.google.dev/aistudio', '');
+        await GM.setValue("GEMINI_API_KEY", GEMINI_API_KEY);
+    }
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
