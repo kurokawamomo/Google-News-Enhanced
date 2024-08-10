@@ -1,7 +1,7 @@
 // ==UserScript==
 // @match           https://news.google.com/*
 // @name            Google News Enhanced via Gemini AI
-// @version         1.5
+// @version         1.6
 // @license         MIT
 // @namespace       djshigel
 // @description  Google News with AI-Generated Annotation via Gemini https://github.com/kurokawamomo/Google-News-Enhanced
@@ -12,7 +12,7 @@
 
 (async () => {
     let GEMINI_API_KEY = await GM.getValue("GEMINI_API_KEY") ;
-    if (!Object.keys(GEMINI_API_KEY).length) {
+    if (!GEMINI_API_KEY || !Object.keys(GEMINI_API_KEY).length) {
         GEMINI_API_KEY = window.prompt('Get Generative Language Client API key from Google AI Studio\nhttps://ai.google.dev/aistudio', '');
         await GM.setValue("GEMINI_API_KEY", GEMINI_API_KEY);
     }
@@ -189,7 +189,7 @@
                     document.querySelector('#gemini-ticker').style.opacity = '1';
                     displayText += char + '●';
                     targetElement.textContent = displayText;
-                    await delay(2);
+                    await delay(1);
                     displayText = displayText.slice(0, -1);
                     document.querySelector('#gemini-ticker').style.opacity = '0';
                 }
@@ -276,13 +276,13 @@
                     console.error('No target element found for summary insertion');
                     return;
                 }
-            
+
                 let displayText = targetElement.textContent + ' ';
                 for (const char of summary) {
                     document.querySelector('#gemini-ticker').style.opacity = '1';
                     displayText += char + '●';
                     targetElement.textContent = displayText;
-                    await delay(2);
+                    await delay(1);
                     displayText = displayText.slice(0, -1);
                     document.querySelector('#gemini-ticker').style.opacity = '0';
                 }
@@ -300,36 +300,41 @@
     const processArticle = async (article, links, title, url) => {
         try {
             document.querySelector('#gemini-ticker').style.opacity = '1';
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [{
-                            text: `私: URLに対し、次の手順に従ってステップバイステップで実行してください。
-                            1 URLにアクセス出来なかった場合、結果を出力しない
-                            2 200字程度に学者のように具体的に要約
-                            3 タイトルや見出しを含めず、結果のみを出力
-                            ${title}のURL: ${url}
-                            あなた:`
-                        }],
-                    }]
-                }),
-            });
+            let summary = await GM.getValue(url);
+            if (!summary || !Object.keys(summary).length) {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: `私: URLに対し、次の手順に従ってステップバイステップで実行してください。
+                                1 URLにアクセス出来なかった場合、結果を出力しない
+                                2 200字程度に学者のように具体的に要約
+                                3 タイトルや見出しを含めず、結果のみを出力
+                                ${title}のURL: ${url}
+                                あなた:`
+                            }],
+                        }]
+                    }),
+                });
 
-            if (!response.ok) throw new Error('Network response was not ok');
+                if (!response.ok) throw new Error('Network response was not ok');
 
-            const reader = response.body.getReader();
-            let result = '', done = false, decoder = new TextDecoder();
-            while (!done) {
-                const { value, done: doneReading } = await reader.read();
-                done = doneReading;
-                if (value) result += decoder.decode(value, { stream: true });
+                const reader = response.body.getReader();
+                let result = '', done = false, decoder = new TextDecoder();
+                while (!done) {
+                    const { value, done: doneReading } = await reader.read();
+                    done = doneReading;
+                    if (value) result += decoder.decode(value, { stream: true });
+                }
+                result += decoder.decode();
+
+                const data = JSON.parse(result);
+                summary = (data.candidates[0]?.content?.parts[0]?.text || '').replace(/\*\*/g, '').replace(/##/g, '');
+
+                if (summary.length >= 180) await GM.setValue(url, summary);
             }
-            result += decoder.decode();
-
-            const data = JSON.parse(result);
-            let summary = (data.candidates[0]?.content?.parts[0]?.text || '').replace(/\*\*/g, '').replace(/##/g, '');
             console.log(`summary: ${summary}`);
 
             let targetElement = article.querySelector('time') || article.querySelector('span');
@@ -359,7 +364,7 @@
                 document.querySelector('#gemini-ticker').style.opacity = '1';
                 displayText += char + '●';
                 targetElement.textContent = displayText;
-                await delay(2);
+                await delay(1);
                 displayText = displayText.slice(0, -1);
                 document.querySelector('#gemini-ticker').style.opacity = '0';
             }
@@ -401,29 +406,6 @@
         console.log(`######## attempt: ${j+1} ########`)
         document.querySelector('#gemini-ticker').style.opacity = '1';
         const articles = Array.from(document.querySelectorAll('article'));
-        
-        if (!document.querySelector('#gemini-forecast')) {
-            await processForecast();
-            await delay(1000);
-        }
-
-        let urls = [];
-        if (!document.querySelector('#gemini-highlight')) {
-            const promiseHighlight = articles.map(async article => {
-                const links = Array.from(article.querySelectorAll('a[href*="./read/"]'));
-                const targetLink = links.length > 1 ? links[links.length - 1] : links[0];
-                if (!targetLink) return Promise.resolve();
-                const href = targetLink.getAttribute('href');
-                const title = targetLink.textContent;
-                const url = await getExtractedURL(href, atParam);
-                urls.push(`${title}: ${url}`);
-            })
-            await Promise.all(promiseHighlight);
-            urls = urls.filter(Boolean).join(' ');
-            console.log(`highlight: ${urls}`)
-            await processHighlight(urls);
-            await delay(1000);
-        }
 
         const allLinks = Array.from(document.querySelectorAll('a[href*="./read/"]'));
         if (allLinks.length == 0) break;
@@ -444,6 +426,25 @@
         });
 
         await Promise.all(promiseArticles);
+
+        if (!document.querySelector('#gemini-forecast')) {
+            await processForecast();
+            await delay(1000);
+        }
+
+        if (!document.querySelector('#gemini-highlight')) {
+            const urls = articles.map(article => {
+                const links = Array.from(article.querySelectorAll('a'));
+                const targetLink = links.length > 1 ? links[links.length - 1] : links[0];
+                if (!targetLink) return null;
+                const href = targetLink.getAttribute('href');
+                const title = targetLink.textContent;
+                return `${title}: ${href}`;
+            }).filter(Boolean).join(' ');
+            console.log(`highlight: ${urls}`)
+            await processHighlight(urls);
+            await delay(1000);
+        }
 
         document.querySelector('#gemini-ticker').style.opacity = '0';
         await delay(1000);
