@@ -1,7 +1,7 @@
 // ==UserScript==
 // @match           https://news.google.com/*
 // @name            Google News Enhanced via Gemini AI
-// @version         1.6
+// @version         1.7
 // @license         MIT
 // @namespace       djshigel
 // @description  Google News with AI-Generated Annotation via Gemini https://github.com/kurokawamomo/Google-News-Enhanced
@@ -396,6 +396,21 @@
         ticker.innerHTML = '✦';
         document.querySelector('body').appendChild(ticker);
     };
+    
+    // ########## Settings ##########
+    const insertSettingsElement = () => {
+        if (document.querySelector('#gemini-api-settings') || !document.querySelector('a[href*="./settings/"]')) return;
+        const settingsLink = document.createElement('div');
+        settingsLink.id = 'gemini-api-settings';
+        settingsLink.style.height = '64px';
+        settingsLink.style.alignContent = 'center';
+        settingsLink.innerHTML = `<a style="height: 34px; font-size: 14px;">Google News Enhanced: Gemini APIキーの設定</a>`;
+        document.querySelector('a[href*="./settings/"]').closest('main > div > div > div').appendChild(settingsLink);
+        settingsLink.querySelector('a').addEventListener('click', async () => {
+            const GEMINI_API_KEY = window.prompt('Get Generative Language Client API key from Google AI Studio\nhttps://ai.google.dev/aistudio', '');
+            if (GEMINI_API_KEY != null) await GM.setValue("GEMINI_API_KEY", GEMINI_API_KEY);
+        }, false);
+    };
 
     // ########## Main ##########
     await delay(1000);
@@ -403,10 +418,10 @@
     let atParam = await getAtParam();
     console.log(`atParam: ${atParam}`)
     for (let j = 0; j < 30 ; j++) {
-        console.log(`######## attempt: ${j+1} ########`)
+        console.log(`######## attempt: ${j+1} ########`);
+        insertSettingsElement();
         document.querySelector('#gemini-ticker').style.opacity = '1';
         const articles = Array.from(document.querySelectorAll('article'));
-
         const allLinks = Array.from(document.querySelectorAll('a[href*="./read/"]'));
         if (allLinks.length == 0) break;
 
@@ -422,10 +437,12 @@
             console.log(`url: ${url}`);
             if (!url) return Promise.resolve();
 
-            return throttledProcessArticle(article, links, title, url, i * 500);
+            return throttledProcessArticle(article, links, title, url, i * 1000);
         });
 
         await Promise.all(promiseArticles);
+
+        insertSettingsElement();
 
         if (!document.querySelector('#gemini-forecast')) {
             await processForecast();
