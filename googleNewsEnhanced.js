@@ -1,7 +1,7 @@
 // ==UserScript==
 // @match           https://news.google.com/*
 // @name            Google News Enhanced via Gemini AI
-// @version         1.7
+// @version         1.8
 // @license         MIT
 // @namespace       djshigel
 // @description  Google News with AI-Generated Annotation via Gemini https://github.com/kurokawamomo/Google-News-Enhanced
@@ -360,6 +360,13 @@
             links.forEach(link => link.setAttribute('href', url));
 
             let displayText = targetElement.textContent + ' ';
+            const author = targetElement.parentElement.querySelector('hr ~ div > span');
+            if (author) {
+                const hr = targetElement.parentElement.querySelector('hr');
+                if (hr) hr.remove();
+                displayText += '•  ' + author.textContent + ' ';
+                author.remove();
+            }
             for (const char of summary) {
                 document.querySelector('#gemini-ticker').style.opacity = '1';
                 displayText += char + '●';
