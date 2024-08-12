@@ -1,7 +1,7 @@
 // ==UserScript==
 // @match           https://news.google.com/*
 // @name            Google News Enhanced via Gemini AI
-// @version         1.8
+// @version         2.0
 // @license         MIT
 // @namespace       djshigel
 // @description  Google News with AI-Generated Annotation via Gemini https://github.com/kurokawamomo/Google-News-Enhanced
@@ -85,7 +85,9 @@
     }
 
     function getCityFromCoordinates(latitude, longitude) {
-        const apiUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=ja`;
+        const apiUrl = (new URL(location.href).searchParams.get('hl') == 'ja') ?
+              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=ja`:
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`;
         return fetch(apiUrl)
             .then(response => response.json())
             .then(data => data.city)
@@ -140,23 +142,41 @@
         for (let attempt = 0; attempt < 3; attempt++) {
             try {
                 document.querySelector('#gemini-ticker').style.opacity = '1';
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [{
-                                text: `私: URLに対し、次の手順に従ってステップバイステップで実行してください。
-                            1 URLにアクセス出来なかった場合、結果を出力しない
-                            2 ${(new Date).toString()}の天気に関する情報を抽出
-                            3 どのように過ごすべきかを含め、200字程度に具体的に要約
-                            4 タイトルや見出しを含めず、結果のみ出力
-                            ${geo}の情報: https://weathernews.jp/onebox/${latitude}/${longitude}/
-                            あなた:`
-                            }],
-                        }]
-                    }),
-                });
+                const response = (new URL(location.href).searchParams.get('hl') == 'ja') ? 
+                    await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{
+                                    text: `私: URLに対し、次の手順に従ってステップバイステップで実行してください。
+                                1 URLにアクセス出来なかった場合、結果を出力しない
+                                2 ${(new Date).toString()}の天気に関する情報を抽出
+                                3 どのように過ごすべきかを含め、200字程度に具体的に要約
+                                4 タイトルや見出しを含めず、結果のみ出力
+                                ${geo}の情報: https://weathernews.jp/onebox/${latitude}/${longitude}/
+                                あなた:`
+                                }],
+                            }]
+                        }),
+                    }):
+                    await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{
+                                    text: `Me: Follow the steps below to execute step by step for each URL.
+                                1 If the URL cannot be accessed, do not output the results
+                                2 Extract weather information from ${(new Date).toString()}
+                                3 Summarize in detail (about 200 characters) including how to spend the day
+                                4 Output only the results, without titles or headings
+                                About ${geo}: https://weathernews.jp/onebox/${latitude}/${longitude}/
+                                You:`
+                                }],
+                            }]
+                        }),
+                    });
 
                 if (!response.ok) throw new Error('Network response was not ok');
 
@@ -218,8 +238,8 @@
             cWizElement.style.marginTop = '10px';
             cWizElement.style.marginBottom = '50px';
             cWizElement.style.width = '100%';
-            cWizElement.innerHTML = `
-                <section>
+            cWizElement.innerHTML = (new URL(location.href).searchParams.get('hl') == 'ja') ? 
+                `<section>
                     <div style='
                         font-size: 1.5em; 
                         margin-bottom: 10px; 
@@ -228,6 +248,22 @@
                         background: linear-gradient(to right, #4698e2, #c6657b); 
                         width: fit-content;' id='gemini-highlight-header'>
                         ✦ Geminiによるハイライト
+                    </div>
+                     <div style='
+                        background-color: ${backgroundColor}; 
+                        padding: 16px; 
+                        border-radius: 15px;' id='gemini-highlight-content'>
+                    </div>
+                </section>`:
+                `<section>
+                    <div style='
+                        font-size: 1.5em; 
+                        margin-bottom: 10px; 
+                        -webkit-background-clip: text!important; 
+                        -webkit-text-fill-color: transparent; 
+                        background: linear-gradient(to right, #4698e2, #c6657b); 
+                        width: fit-content;' id='gemini-highlight-header'>
+                        ✦ Highlight via Gemini
                     </div>
                      <div style='
                         background-color: ${backgroundColor}; 
@@ -243,17 +279,29 @@
         for (let attempt = 0; attempt < 3; attempt++) {
             try {
                 document.querySelector('#gemini-ticker').style.opacity = '1';
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [{
-                                text: `次に示す最新のニュースの中から最も重要なニュース1つに対し5文で深堀りをどうぞ。 ${urls}`
-                            }],
-                        }]
-                    }),
-                });
+                const response = (new URL(location.href).searchParams.get('hl') == 'ja') ?
+                    await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{
+                                    text: `次に示す最新のニュースの中から最も重要なニュース1つに対し5文で深堀りをどうぞ。 ${urls}`
+                                }],
+                            }]
+                        }),
+                    }):
+                    await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{
+                                    text: `Below, please take a eight-sentence in-depth look at one of the most important recent news stories. ${urls}`
+                                }],
+                            }]
+                        }),
+                    });
 
                 if (!response.ok) throw new Error('Network response was not ok');
 
@@ -302,22 +350,39 @@
             document.querySelector('#gemini-ticker').style.opacity = '1';
             let summary = await GM.getValue(url);
             if (!summary || !Object.keys(summary).length) {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [{
-                                text: `私: URLに対し、次の手順に従ってステップバイステップで実行してください。
-                                1 URLにアクセス出来なかった場合、結果を出力しない
-                                2 200字程度に学者のように具体的に要約
-                                3 タイトルや見出しを含めず、結果のみを出力
-                                ${title}のURL: ${url}
-                                あなた:`
-                            }],
-                        }]
-                    }),
-                });
+                const response = (new URL(location.href).searchParams.get('hl') == 'ja') ?
+                    await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{
+                                parts: [{
+                                    text: `私: URLに対し、次の手順に従ってステップバイステップで実行してください。
+                                    1 URLにアクセス出来なかった場合、結果を出力しない
+                                    2 200字程度に学者のように具体的に要約
+                                    3 タイトルや見出しを含めず、結果のみを出力
+                                    ${title}のURL: ${url}
+                                    あなた:`
+                                }],
+                            }]
+                        }),
+                    }):
+                    await fetch(apiUrl, {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({
+                             contents: [{
+                                 parts: [{
+                                    text: `Me: Follow the steps below to execute step by step for each URL.
+                                    1 If the URL cannot be accessed, do not output the results
+                                    2 Summarize in 400 characters or so like an academic
+                                    3 Output only the results, without titles or headings
+                                    ${title} with URL: ${url}
+                                    You:`
+                                 }],
+                             }]
+                         }),
+                     });
 
                 if (!response.ok) throw new Error('Network response was not ok');
 
@@ -364,7 +429,7 @@
             if (author) {
                 const hr = targetElement.parentElement.querySelector('hr');
                 if (hr) hr.remove();
-                displayText += '•  ' + author.textContent + ' ';
+                displayText += '• ' + author.textContent + '  ';
                 author.remove();
             }
             for (const char of summary) {
@@ -411,7 +476,9 @@
         settingsLink.id = 'gemini-api-settings';
         settingsLink.style.height = '64px';
         settingsLink.style.alignContent = 'center';
-        settingsLink.innerHTML = `<a style="height: 34px; font-size: 14px;">Google News Enhanced: Gemini APIキーの設定</a>`;
+        settingsLink.innerHTML = (new URL(location.href).searchParams.get('hl') == 'ja') ? 
+            `<a style="height: 34px; font-size: 14px;">Google News Enhanced: Gemini APIキーの設定</a>`:
+            `<a style="height: 34px; font-size: 14px;">Google News Enhanced: Setting for Gemini API key</a>`;
         document.querySelector('a[href*="./settings/"]').closest('main > div > div > div').appendChild(settingsLink);
         settingsLink.querySelector('a').addEventListener('click', async () => {
             const GEMINI_API_KEY = window.prompt('Get Generative Language Client API key from Google AI Studio\nhttps://ai.google.dev/aistudio', '');
@@ -425,7 +492,7 @@
     let atParam = await getAtParam();
     console.log(`atParam: ${atParam}`)
     for (let j = 0; j < 30 ; j++) {
-        console.log(`######## attempt: ${j+1} ########`);
+        console.log(`######## attempt: ${j+1} ########`)
         insertSettingsElement();
         document.querySelector('#gemini-ticker').style.opacity = '1';
         const articles = Array.from(document.querySelectorAll('article'));
@@ -436,7 +503,6 @@
             const links = Array.from(article.querySelectorAll('a[href*="./read/"]'));
             const targetLink = links.length > 1 ? links[links.length - 1] : links[0];
             if (!targetLink) return Promise.resolve();
-
             const href = targetLink.getAttribute('href');
             const title = targetLink.textContent;
             const url = await getExtractedURL(href, atParam);
