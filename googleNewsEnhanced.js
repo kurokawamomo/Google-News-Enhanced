@@ -1,10 +1,10 @@
 // ==UserScript==
 // @match           https://news.google.com/*
 // @name            Google News Enhanced via Gemini AI
-// @version         2.0
+// @version         2.3
 // @license         MIT
 // @namespace       djshigel
-// @description  Google News with AI-Generated Annotation via Gemini https://github.com/kurokawamomo/Google-News-Enhanced
+// @description  Google News with AI-Generated Annotation via Gemini
 // @run-at          document-end
 // @grant           GM.setValue
 // @grant           GM.getValue
@@ -19,6 +19,20 @@
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+    // ########## Header ##########
+    function insertHeaderStyle() {
+        const $headerStyle = document.createElement('style');
+        const header = document.querySelector('header[role="banner"]');
+        $headerStyle.innerText = `
+            @media screen and (max-height: 860px) {
+                header[role="banner"] {
+                    position: absolute!important;
+                    margin-bottom : -${header.clientHeight}px;
+                }
+            }`;
+        document.querySelector('head').appendChild($headerStyle);
+    }
+    
     // ########## Extract URL ##########
     function sendPostRequest(endPoint, param) {
         return new Promise((resolve, reject) => {
@@ -441,6 +455,23 @@
                 document.querySelector('#gemini-ticker').style.opacity = '0';
             }
             targetElement.textContent = displayText;
+
+//             const observer =  new MutationObserver(async () => {
+//                 await delay(500);
+//                 MutationObserver.disconnect() 
+//                 const recoveredSummary = await GM.getValue(url);
+//                 if (recoveredSummary) {
+//                     if (author) {
+//                         const hr = targetElement.parentElement.querySelector('hr');
+//                         if (hr) hr.remove();
+//                         displayText += '• ' + author.textContent + '  ';
+//                         author.remove();
+//                     }
+//                     targetElement.textContent += recoveredSummary;
+//                 }
+//                 observer.observe(article, {childList: true, subtree: true});
+//             });
+//             observer.observe(article, {childList: true, subtree: true});
         } catch (error) {
             document.querySelector('#gemini-ticker').style.opacity = '0';
             await delay(5000);
@@ -487,8 +518,9 @@
     };
 
     // ########## Main ##########
-    await delay(1000);
+    insertHeaderStyle();
     insertTickerElement();
+    await delay(1000);
     let atParam = await getAtParam();
     console.log(`atParam: ${atParam}`)
     for (let j = 0; j < 30 ; j++) {
