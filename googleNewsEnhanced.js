@@ -1,7 +1,7 @@
 // ==UserScript==
 // @match           https://news.google.com/*
 // @name            Google News Enhanced via Gemini AI
-// @version         2.3
+// @version         2.5
 // @license         MIT
 // @namespace       djshigel
 // @description  Google News with AI-Generated Annotation via Gemini
@@ -32,7 +32,21 @@
             }`;
         document.querySelector('head').appendChild($headerStyle);
     }
-    
+
+    // ########## Load continuous page sections ##########
+
+    const loadContinuous = async () => {
+        for (let i = 0; i < 20; i++) {
+            await delay(100);
+            let intersectionObservedElement = document.querySelector('main c-wiz > c-wiz ~ div[jsname]');
+            if (!intersectionObservedElement) break;
+            intersectionObservedElement.style.position = 'fixed' ;
+            intersectionObservedElement.style.top = '0';
+        }
+        console.log(`loaded: ${document.querySelectorAll('main c-wiz > c-wiz').length} pages`);
+        await delay(500);
+    };
+
     // ########## Extract URL ##########
     function sendPostRequest(endPoint, param) {
         return new Promise((resolve, reject) => {
@@ -520,7 +534,7 @@
     // ########## Main ##########
     insertHeaderStyle();
     insertTickerElement();
-    await delay(1000);
+    await loadContinuous();
     let atParam = await getAtParam();
     console.log(`atParam: ${atParam}`)
     for (let j = 0; j < 30 ; j++) {
