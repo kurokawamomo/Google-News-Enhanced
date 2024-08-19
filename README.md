@@ -3,8 +3,8 @@ Google News with AI-Generated Annotation via Gemini
 
 ## Screen Shots
 
-![Screenshot](https://github.com/kurokawamomo/Google-News-Enchanced/assets/2446050/b3b49ce7-11ff-476f-be48-35829d0cc7dd)
-![Screenshot 2024-06-23 at 3 39 05](https://github.com/kurokawamomo/Google-News-Enchanced/assets/2446050/49322354-3a58-412b-a1b0-dfa1e61e33ee)
+![Screenshot 2024-08-19 at 18 10 03](https://github.com/user-attachments/assets/68c6da31-b520-47bb-b0f2-3c42f5453ee4)
+![Screenshot 2024-08-19 at 17 16 17](https://github.com/user-attachments/assets/30afc2c2-b70d-4d45-8fd7-6fc348e2d48b)
 
 ## Usage
 

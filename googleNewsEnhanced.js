@@ -1,7 +1,7 @@
 // ==UserScript==
 // @match           https://news.google.com/*
 // @name            Google News Enhanced via Gemini AI
-// @version         2.5
+// @version         2.7
 // @license         MIT
 // @namespace       djshigel
 // @description  Google News with AI-Generated Annotation via Gemini
@@ -44,7 +44,7 @@
             intersectionObservedElement.style.top = '0';
         }
         console.log(`loaded: ${document.querySelectorAll('main c-wiz > c-wiz').length} pages`);
-        await delay(500);
+        await delay(1000);
     };
 
     // ########## Extract URL ##########
@@ -253,8 +253,12 @@
 
     // ########## Highlight ##########
     const insertHighlightElement = () => {
-        const cWizElements = document.querySelectorAll('main>c-wiz>c-wiz, main>div>c-wiz, main>div>div>c-wiz');
-        const validHolders = Array.from(document.querySelectorAll('c-wiz>section, c-wiz>section>div>div')).filter(element => {
+        const cWizElements = document.querySelector('aside>c-wiz') ?
+            document.querySelectorAll('aside>c-wiz>*'):
+            document.querySelector('main>c-wiz>c-wiz>c-wiz') ?
+                document.querySelectorAll('main>c-wiz>*'):
+                document.querySelectorAll('main>c-wiz>c-wiz, main>div>c-wiz, main>div>div>c-wiz');
+        const validHolders = Array.from(document.querySelectorAll('c-wiz>section, c-wiz>section>div>div, main>div>c-wiz>c-wiz, main>c-wiz>c-wiz>c-wiz')).filter(element => {
             const backgroundColor = getComputedStyle(element).backgroundColor;
             return backgroundColor !== 'rgba(0, 0, 0, 0)' && backgroundColor !== 'transparent';         
         });
@@ -263,11 +267,10 @@
             const backgroundColor = getComputedStyle(validHolders[0]).backgroundColor;
             const cWizElement = document.createElement('c-wiz');
             cWizElement.id = 'gemini-highlight';
-            cWizElement.style.marginTop = '10px';
             cWizElement.style.marginBottom = '50px';
             cWizElement.style.width = '100%';
             cWizElement.innerHTML = (new URL(location.href).searchParams.get('hl') == 'ja') ? 
-                `<section>
+                `<section style='margin-top: 20px'>
                     <div style='
                         font-size: 1.5em; 
                         margin-bottom: 10px; 
@@ -283,7 +286,7 @@
                         border-radius: 15px;' id='gemini-highlight-content'>
                     </div>
                 </section>`:
-                `<section>
+                `<section style='margin-top: 20px'>
                     <div style='
                         font-size: 1.5em; 
                         margin-bottom: 10px; 
@@ -469,23 +472,6 @@
                 document.querySelector('#gemini-ticker').style.opacity = '0';
             }
             targetElement.textContent = displayText;
-
-//             const observer =  new MutationObserver(async () => {
-//                 await delay(500);
-//                 MutationObserver.disconnect() 
-//                 const recoveredSummary = await GM.getValue(url);
-//                 if (recoveredSummary) {
-//                     if (author) {
-//                         const hr = targetElement.parentElement.querySelector('hr');
-//                         if (hr) hr.remove();
-//                         displayText += '• ' + author.textContent + '  ';
-//                         author.remove();
-//                     }
-//                     targetElement.textContent += recoveredSummary;
-//                 }
-//                 observer.observe(article, {childList: true, subtree: true});
-//             });
-//             observer.observe(article, {childList: true, subtree: true});
         } catch (error) {
             document.querySelector('#gemini-ticker').style.opacity = '0';
             await delay(5000);
