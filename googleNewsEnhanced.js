@@ -1,7 +1,7 @@
 // ==UserScript==
 // @match           https://news.google.com/*
 // @name            Google News Enhanced via Gemini AI
-// @version         2.7
+// @version         2.8
 // @license         MIT
 // @namespace       djshigel
 // @description  Google News with AI-Generated Annotation via Gemini
@@ -18,6 +18,7 @@
     }
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    let consecutive429Count = 0;
 
     // ########## Header ##########
     function insertHeaderStyle() {
@@ -206,7 +207,21 @@
                         }),
                     });
 
-                if (!response.ok) throw new Error('Network response was not ok');
+                if (!response.ok) {
+                    if (response.status === 429) {
+                        consecutive429Count++;
+                        if (consecutive429Count >= 3) {
+                            console.warn("Too many requests. Pausing for a while...");
+                            await delay(10000);
+                            consecutive429Count = 0;
+                            continue;
+                        }
+                    } else {
+                        throw new Error('Network response was not ok');
+                    }
+                } else {
+                    consecutive429Count = 0;
+                }
 
                 const reader = response.body.getReader();
                 let result = '', done = false, decoder = new TextDecoder();
@@ -218,7 +233,8 @@
                 result += decoder.decode();
 
                 const data = JSON.parse(result);
-                let summary = (data.candidates[0]?.content?.parts[0]?.text || '').replace(/\*\*/g, '').replace(/##/g, '');
+                if (!data.candidates[0]?.content?.parts[0]?.text) continue;
+                let summary = data.candidates[0].content.parts[0].text.replace(/\*\*/g, '').replace(/##/g, '');
                 if (summary.length < 80) {
                     console.error('Summary is too short');
                     return;
@@ -334,7 +350,21 @@
                         }),
                     });
 
-                if (!response.ok) throw new Error('Network response was not ok');
+                if (!response.ok) {
+                    if (response.status === 429) {
+                        consecutive429Count++;
+                        if (consecutive429Count >= 3) {
+                            console.warn("Too many requests. Pausing for a while...");
+                            await delay(10000);
+                            consecutive429Count = 0;
+                            continue;
+                        }
+                    } else {
+                        throw new Error('Network response was not ok');
+                    }
+                } else {
+                    consecutive429Count = 0;
+                }
 
                 const reader = response.body.getReader();
                 let result = '', done = false, decoder = new TextDecoder();
@@ -346,7 +376,8 @@
                 result += decoder.decode();
 
                 const data = JSON.parse(result);
-                let summary = (data.candidates[0]?.content?.parts[0]?.text || '').replace(/\*\*/g, '').replace(/##/g, '');
+                if (!data.candidates[0]?.content?.parts[0]?.text) continue;
+                let summary = data.candidates[0].content.parts[0].text.replace(/\*\*/g, '').replace(/##/g, '');
                 console.log(`highlights: ${summary}`);
 
                 insertHighlightElement();
@@ -415,7 +446,21 @@
                          }),
                      });
 
-                if (!response.ok) throw new Error('Network response was not ok');
+                if (!response.ok) {
+                    if (response.status === 429) {
+                        consecutive429Count++;
+                        if (consecutive429Count >= 3) {
+                            console.warn("Too many requests. Pausing for a while...");
+                            await delay(30000);
+                            consecutive429Count = 0;
+                            return Promise.resolve();
+                        }
+                    } else {
+                        throw new Error('Network response was not ok');
+                    }
+                } else {
+                    consecutive429Count = 0;
+                }
 
                 const reader = response.body.getReader();
                 let result = '', done = false, decoder = new TextDecoder();
@@ -427,17 +472,18 @@
                 result += decoder.decode();
 
                 const data = JSON.parse(result);
-                summary = (data.candidates[0]?.content?.parts[0]?.text || '').replace(/\*\*/g, '').replace(/##/g, '');
+                if (!data.candidates[0]?.content?.parts[0]?.text) return Promise.resolve();
+                summary = data.candidates[0].content.parts[0].text.replace(/\*\*/g, '').replace(/##/g, '');
 
                 if (summary.length >= 180) await GM.setValue(url, summary);
             }
             console.log(`summary: ${summary}`);
 
-            let targetElement = article.querySelector('time') || article.querySelector('span');
+            let targetElement = article.querySelector('time') || article.querySelector('span') || null;
             if (!targetElement || !targetElement.tagName) {
                 const targetLinks = article.querySelectorAll('a[href*="./read/"]');
                 const targetLink = targetLinks.length > 1 ? targetLinks[targetLinks.length - 1] : targetLinks[0];
-                const targetElement = document.createElement('span');
+                targetElement = document.createElement('span');
                 targetElement.style.fontSize = '12px';
                 targetElement.style.fontWeight = '200';
                 targetElement.style.marginRight = '-90px';
@@ -542,7 +588,7 @@
             console.log(`url: ${url}`);
             if (!url) return Promise.resolve();
 
-            return throttledProcessArticle(article, links, title, url, i * 1000);
+            return throttledProcessArticle(article, links, title, url, i * 500);
         });
 
         await Promise.all(promiseArticles);
