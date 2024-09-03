@@ -1,7 +1,7 @@
 // ==UserScript==
 // @match           https://news.google.com/*
 // @name            Google News Enhanced via Gemini AI
-// @version         3.1
+// @version         3.2
 // @license         MIT
 // @namespace       djshigel
 // @description  Google News with AI-Generated Annotation via Gemini
@@ -10,7 +10,14 @@
 // @grant           GM.getValue
 // ==/UserScript==
 
-(async () => {
+let currentPage=[''];
+const observer = new MutationObserver(async () => {
+    currentPage.push(location.href);
+    if (currentPage[0] == currentPage[1]) {
+        currentPage = [location.href];
+        return;
+    }
+    currentPage = [location.href];
     let GEMINI_API_KEY = await GM.getValue("GEMINI_API_KEY");
     if (!GEMINI_API_KEY || !Object.keys(GEMINI_API_KEY).length) {
         GEMINI_API_KEY = window.prompt('Get Generative Language Client API key from Google AI Studio\nhttps://ai.google.dev/aistudio', '');
@@ -578,6 +585,7 @@
     // ########## Main ##########
     insertHeaderStyle();
     insertTickerElement();
+    insertSettingsElement();
     await loadContinuous();
     for (let j = 0; j < 30 ; j++) {
         console.log(`######## attempt: ${j+1} ########`)
@@ -606,8 +614,6 @@
         timestamp = '';
         signature = '';
 
-        insertSettingsElement();
-
         if (!document.querySelector('#gemini-forecast')) {
             await processForecast();
             await delay(1000);
@@ -632,4 +638,7 @@
     }
     document.querySelector('#gemini-ticker').style.opacity = '0';
     console.log('######## Ended up all ########')
-})();
+});
+observer.observe(document.head, { childList: true, subtree: true });
+
+
