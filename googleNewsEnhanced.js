@@ -1,7 +1,7 @@
 // ==UserScript==
 // @match           https://news.google.com/*
 // @name            Google News Enhanced via Gemini AI
-// @version         3.2
+// @version         3.8
 // @license         MIT
 // @namespace       djshigel
 // @description  Google News with AI-Generated Annotation via Gemini
@@ -10,14 +10,7 @@
 // @grant           GM.getValue
 // ==/UserScript==
 
-let currentPage=[''];
-const observer = new MutationObserver(async () => {
-    currentPage.push(location.href);
-    if (currentPage[0] == currentPage[1]) {
-        currentPage = [location.href];
-        return;
-    }
-    currentPage = [location.href];
+(async () => {
     let GEMINI_API_KEY = await GM.getValue("GEMINI_API_KEY");
     if (!GEMINI_API_KEY || !Object.keys(GEMINI_API_KEY).length) {
         GEMINI_API_KEY = window.prompt('Get Generative Language Client API key from Google AI Studio\nhttps://ai.google.dev/aistudio', '');
@@ -60,7 +53,7 @@ const observer = new MutationObserver(async () => {
     // ########## Extract URL ##########
     const fetchRedirectPage = async (href) => {
         try {
-            const response = await fetch(`${window.location.origin}${window.location.pathname.substring(0, window.location.pathname.indexOf('/', 3))}/read/${href}`)
+            const response = await fetch(`${window.location.origin}${window.location.pathname.substring(0, window.location.pathname.indexOf('/', 3))}/rss/articles/${href}`);
             if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
             const responseText = await response.text();
             const parser = new DOMParser();
@@ -97,15 +90,16 @@ const observer = new MutationObserver(async () => {
             for (let i = 0; i < 3; i++) {
                 if(!token || !timestamp || !signature) {
                     const redirectPage = await fetchRedirectPage(href);
-                    if (!redirectPage.querySelector('script[data-id]') || !redirectPage.querySelector('c-wiz>div')) continue;
-                    token = redirectPage.querySelector('script[data-id]').textContent.match(/[A-Za-z0-9]{25,35}:[0-9]{10,15}/);
+                    if (!redirectPage.querySelector('script#_ij') || !redirectPage.querySelector('c-wiz>div')) continue;
+                    token = redirectPage.querySelector('script#_ij').textContent.match(/[A-Za-z0-9]{25,35}:[0-9]{10,15}/);
                     if (!token) continue;
                     token = token[0];
                     signature = redirectPage.querySelector('c-wiz>div').getAttribute('data-n-a-sg');
                     timestamp = token.split(':')[1].substring(0,10);
+                    console.log(`Tokens: ${timestamp} / ${signature} / ${token}`);
                 }
                 const endPoint = `/_/DotsSplashUi/data/batchexecute?source-path=%2Fread%2F${href}`;
-                const param = `f.req=%5B%5B%5B%22Fbv4je%22%2C%22%5B%5C%22garturlreq%5C%22%2C%5B%5B%5C%22ja%5C%22%2C%5C%22JP%5C%22%2C%5B%5C%22FINANCE_TOP_INDICES%5C%22%2C%5C%22WEB_TEST_1_0_0%5C%22%5D%2Cnull%2Cnull%2C1%2C1%2C%5C%22JP%3Aja%5C%22%2Cnull%2C540%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2C0%2Cnull%2Cnull%2C%5B1529283084%2C281000000%5D%5D%2C%5C%22ja%5C%22%2C%5C%22JP%5C%22%2C1%2C%5B2%2C3%2C4%2C8%5D%2C1%2C0%2C%5C%22668194412%5C%22%2C0%2C0%2Cnull%2C0%5D%2C%5C%22${href}%5C%22%2C${timestamp}%2C%5C%22${signature}%5C%22%5D%22%2Cnull%2C%22generic%22%5D%5D%5D&at=${token}&`
+                const param = `f.req=%5B%5B%5B%22Fbv4je%22%2C%22%5B%5C%22garturlreq%5C%22%2C%5B%5B%5C%22ja%5C%22%2C%5C%22JP%5C%22%2C%5B%5C%22FINANCE_TOP_INDICES%5C%22%2C%5C%22WEB_TEST_1_0_0%5C%22%5D%2Cnull%2Cnull%2C1%2C1%2C%5C%22JP%3Aja%5C%22%2Cnull%2C540%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2C0%2Cnull%2Cnull%2C%5B1529283084%2C281000000%5D%5D%2C%5C%22ja%5C%22%2C%5C%22JP%5C%22%2C1%2C%5B2%2C3%2C4%2C8%5D%2C1%2C0%2C%5C%22668194412%5C%22%2C0%2C0%2Cnull%2C0%5D%2C%5C%22${href}%5C%22%2C${timestamp}%2C%5C%22${signature}%5C%22%5D%22%2Cnull%2C%22generic%22%5D%5D%5D`//&at=${token}&`
                 const response = await sendPostRequest(endPoint, param);
                 const indexOfStartString = response.replace('httprm', '').indexOf('http');
                 if (indexOfStartString == -1) continue;
@@ -157,7 +151,6 @@ const observer = new MutationObserver(async () => {
             throw error;
         }
     }
-
 
     const insertForecastElement = async (forecastLink) => {
         if (forecastLink) {
@@ -564,7 +557,7 @@ const observer = new MutationObserver(async () => {
         ticker.innerHTML = '✦';
         document.querySelector('body').appendChild(ticker);
     };
-    
+
     // ########## Settings ##########
     const insertSettingsElement = () => {
         if (document.querySelector('#gemini-api-settings') || !document.querySelector('a[href*="./settings/"]')) return;
@@ -585,7 +578,6 @@ const observer = new MutationObserver(async () => {
     // ########## Main ##########
     insertHeaderStyle();
     insertTickerElement();
-    insertSettingsElement();
     await loadContinuous();
     for (let j = 0; j < 30 ; j++) {
         console.log(`######## attempt: ${j+1} ########`)
@@ -614,6 +606,8 @@ const observer = new MutationObserver(async () => {
         timestamp = '';
         signature = '';
 
+        insertSettingsElement();
+
         if (!document.querySelector('#gemini-forecast')) {
             await processForecast();
             await delay(1000);
@@ -638,7 +632,4 @@ const observer = new MutationObserver(async () => {
     }
     document.querySelector('#gemini-ticker').style.opacity = '0';
     console.log('######## Ended up all ########')
-});
-observer.observe(document.head, { childList: true, subtree: true });
-
-
+})();
