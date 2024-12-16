@@ -1,7 +1,7 @@
 // ==UserScript==
 // @match           https://news.google.com/*
 // @name            Google News Enhanced via Gemini AI
-// @version         3.8
+// @version         5.2
 // @license         MIT
 // @namespace       djshigel
 // @description  Google News with AI-Generated Annotation via Gemini
@@ -16,12 +16,9 @@
         GEMINI_API_KEY = window.prompt('Get Generative Language Client API key from Google AI Studio\nhttps://ai.google.dev/aistudio', '');
         await GM.setValue("GEMINI_API_KEY", GEMINI_API_KEY);
     }
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`;
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
     let consecutive429Count = 0;
-    let token = '';
-    let timestamp = '';
-    let signature = '';
 
     // ########## Header ##########
     function insertHeaderStyle() {
@@ -47,72 +44,8 @@
             intersectionObservedElement.style.position = 'fixed' ;
             intersectionObservedElement.style.top = '0';
         }
+        await delay(3000);
         console.log(`loaded: ${document.querySelectorAll('main c-wiz > c-wiz').length} pages`);
-    };
-
-    // ########## Extract URL ##########
-    const fetchRedirectPage = async (href) => {
-        try {
-            const response = await fetch(`${window.location.origin}${window.location.pathname.substring(0, window.location.pathname.indexOf('/', 3))}/rss/articles/${href}`);
-            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-            const responseText = await response.text();
-            const parser = new DOMParser();
-            return parser.parseFromString(responseText, 'text/html');
-        } catch (error) {
-            console.error('Error fetching redirect:', error);
-        }
-    };
-
-    function sendPostRequest(endPoint, param) {
-        return new Promise((resolve, reject) => {
-            var xhr = new XMLHttpRequest();
-
-            xhr.open("POST", endPoint, true);
-            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-            xhr.onreadystatechange = function() {
-                if (xhr.readyState === 4) {
-                    if (xhr.status === 200) {
-                        resolve(xhr.responseText.replace('httprm', ''));
-                    } else if (xhr.status === 400) {
-                        reject(Error(xhr.responseText));
-                    } else {
-                        reject(new Error("Request failed with status " + xhr.status + ": " + xhr.statusText));
-                    }
-                }
-            };
-            xhr.send(param);
-        });
-    }
-
-    const getExtractedURL = async (href) => {
-        href = href.replace('./read/', '').split('?')[0].split('_')[0];
-        try {
-            for (let i = 0; i < 3; i++) {
-                if(!token || !timestamp || !signature) {
-                    const redirectPage = await fetchRedirectPage(href);
-                    if (!redirectPage.querySelector('script#_ij') || !redirectPage.querySelector('c-wiz>div')) continue;
-                    token = redirectPage.querySelector('script#_ij').textContent.match(/[A-Za-z0-9]{25,35}:[0-9]{10,15}/);
-                    if (!token) continue;
-                    token = token[0];
-                    signature = redirectPage.querySelector('c-wiz>div').getAttribute('data-n-a-sg');
-                    timestamp = token.split(':')[1].substring(0,10);
-                    console.log(`Tokens: ${timestamp} / ${signature} / ${token}`);
-                }
-                const endPoint = `/_/DotsSplashUi/data/batchexecute?source-path=%2Fread%2F${href}`;
-                const param = `f.req=%5B%5B%5B%22Fbv4je%22%2C%22%5B%5C%22garturlreq%5C%22%2C%5B%5B%5C%22ja%5C%22%2C%5C%22JP%5C%22%2C%5B%5C%22FINANCE_TOP_INDICES%5C%22%2C%5C%22WEB_TEST_1_0_0%5C%22%5D%2Cnull%2Cnull%2C1%2C1%2C%5C%22JP%3Aja%5C%22%2Cnull%2C540%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2C0%2Cnull%2Cnull%2C%5B1529283084%2C281000000%5D%5D%2C%5C%22ja%5C%22%2C%5C%22JP%5C%22%2C1%2C%5B2%2C3%2C4%2C8%5D%2C1%2C0%2C%5C%22668194412%5C%22%2C0%2C0%2Cnull%2C0%5D%2C%5C%22${href}%5C%22%2C${timestamp}%2C%5C%22${signature}%5C%22%5D%22%2Cnull%2C%22generic%22%5D%5D%5D`//&at=${token}&`
-                const response = await sendPostRequest(endPoint, param);
-                const indexOfStartString = response.replace('httprm', '').indexOf('http');
-                if (indexOfStartString == -1) continue;
-                const lengthOfURL = response.substring(indexOfStartString).indexOf('\",') - 1;
-                return response.substring(indexOfStartString, indexOfStartString + lengthOfURL)
-                    .replace(/\\\\u([a-fA-F0-9]{4})/g, (s, g) => String.fromCharCode(parseInt(g, 16)))
-                    .replace(/\\u([a-fA-F0-9]{4})/g, (s, g) => String.fromCharCode(parseInt(g, 16)));
-            }
-        } catch (error) {
-            document.querySelector('#gemini-ticker').style.opacity = '0';
-            console.error("URL decode error", error);
-            return null;
-        }
     };
 
     // ########## Forecast ##########
@@ -124,32 +57,6 @@
                 reject(new Error("Geolocation is not supported by this browser."));
             }
         });
-    }
-
-    function getCityFromCoordinates(latitude, longitude) {
-        const apiUrl = (new URL(location.href).searchParams.get('hl') == 'ja') ?
-              `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=ja`:
-            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`;
-        return fetch(apiUrl)
-            .then(response => response.json())
-            .then(data => data.city)
-            .catch(error => {
-                console.error('Error fetching the city data:', error);
-                throw error;
-            });
-    }
-
-    async function getCity(position) {
-        try {
-            const latitude = position.coords.latitude;
-            const longitude = position.coords.longitude;
-            const city = await getCityFromCoordinates(latitude, longitude);
-            return city;
-        } catch (error) {
-            document.querySelector('#gemini-ticker').style.opacity = '0';
-            console.error('Error getting position or city:', error);
-            throw error;
-        }
     }
 
     const insertForecastElement = async (forecastLink) => {
@@ -166,7 +73,7 @@
         const forecastLink = document.querySelector('a[href*="https://weathernews.jp/"]') || 
             document.querySelector('a[href*="https://weather.com/"]');
         if (!forecastLink) return;
-        let geo = '全国' ;
+        let geo = 'nationwide' ;
         let latitude = null;
         let longitude = null;
         try {
@@ -174,10 +81,11 @@
             if (position && position.coords && position.coords.latitude && position.coords.longitude) {
                 latitude = position.coords.latitude;
                 longitude = position.coords.longitude;
+                geo = `{${latitude}, ${longitude}}`
+                if (!latitude || !longitude) geo = 'nationwide'
             }
-            geo = await getCity(position);
         } catch (error) {
-            geo = '全国' ;
+            geo = 'nationwide' ;
         }
         console.log(`forecast: ${geo}`);
         for (let attempt = 0; attempt < 3; attempt++) {
@@ -190,12 +98,11 @@
                         body: JSON.stringify({
                             contents: [{
                                 parts: [{
-                                    text: `私: URLに対し、次の手順に従ってステップバイステップで実行してください。
+                                    text: `私: 次の手順に従ってステップバイステップで実行してください。返事や番号は不要です。
                                 1 URLにアクセス出来なかった場合、結果を出力しない
-                                2 ${(new Date).toString()}の天気に関する情報を抽出
+                                2 ${geo}の地域における、${(new Date).toString()}の天気に関する情報を抽出
                                 3 どのように過ごすべきかを含め、200字程度に具体的に要約
                                 4 タイトルや見出しを含めず、結果のみ出力
-                                ${geo}の情報: https://weathernews.jp/onebox/${latitude}/${longitude}/
                                 あなた:`
                                 }],
                             }]
@@ -207,12 +114,11 @@
                         body: JSON.stringify({
                             contents: [{
                                 parts: [{
-                                    text: `Me: Follow the steps below to execute step by step for each URL.
+                                    text: `Me: Follow the steps below to execute step by step for each URL. No reply or number needed.
                                 1 If the URL cannot be accessed, do not output the results
-                                2 Extract weather information from ${(new Date).toString()}
+                                2 Extract weather information from ${(new Date).toString()} at ${geo}
                                 3 Summarize in detail (about 200 characters) including how to spend the day
                                 4 Output only the results, without titles or headings
-                                About ${geo}: https://weathernews.jp/onebox/${latitude}/${longitude}/
                                 You:`
                                 }],
                             }]
@@ -245,7 +151,11 @@
                 result += decoder.decode();
 
                 const data = JSON.parse(result);
-                if (!data.candidates[0]?.content?.parts[0]?.text) continue;
+                if (data.error?.message || !data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    console.error('Error:', data.error.message);
+                    consecutive429Count++;
+                    continue;
+                }
                 let summary = data.candidates[0].content.parts[0].text.replace(/\*\*/g, '').replace(/##/g, '');
                 if (summary.length < 80) {
                     console.error('Summary is too short');
@@ -261,15 +171,18 @@
                 }
 
                 let displayText = targetElement.textContent + ' ';
-                for (const char of summary) {
-                    document.querySelector('#gemini-ticker').style.opacity = '1';
-                    displayText += char + '●';
-                    targetElement.textContent = displayText;
-                    await delay(1);
-                    displayText = displayText.slice(0, -1);
-                    document.querySelector('#gemini-ticker').style.opacity = '0';
-                }
+                const chunkSize = 20;
                 targetElement.textContent = displayText;
+                for (let i = 0; i < summary.length; i += chunkSize) {
+                    const chunk = summary.slice(i, i + chunkSize);
+                    const chunkSpan = document.createElement('span');
+                    chunkSpan.style.opacity = '0';
+                    chunkSpan.textContent = chunk;
+                    targetElement.appendChild(chunkSpan);
+                    await delay(100);
+                    chunkSpan.style.transition = 'opacity 1s ease-in-out';
+                    chunkSpan.style.opacity = '1';
+                }
                 return;
             } catch (error) {
                 document.querySelector('#gemini-ticker').style.opacity = '0';
@@ -345,7 +258,7 @@
                         body: JSON.stringify({
                             contents: [{
                                 parts: [{
-                                    text: `次に示す最新のニュースの中から最も重要なニュース1つに対し5文で深堀りをどうぞ。 ${urls}`
+                                    text: `次に示す最新のニュースの中から最も重要なニュース1つに対し5文で深堀りをどうぞ。返事や番号は不要です。 ${urls}`
                                 }],
                             }]
                         }),
@@ -356,7 +269,7 @@
                         body: JSON.stringify({
                             contents: [{
                                 parts: [{
-                                    text: `Below, please take a eight-sentence in-depth look at one of the most important recent news stories. ${urls}`
+                                    text: `Below, please take a eight-sentence in-depth look at one of the most important recent news stories. No reply or number needed. ${urls}`
                                 }],
                             }]
                         }),
@@ -388,7 +301,11 @@
                 result += decoder.decode();
 
                 const data = JSON.parse(result);
-                if (!data.candidates[0]?.content?.parts[0]?.text) continue;
+                if (data.error?.message || !data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    console.error('Error:', data.error.message);
+                    consecutive429Count++;
+                    continue;
+                }
                 let summary = data.candidates[0].content.parts[0].text.replace(/\*\*/g, '').replace(/##/g, '');
                 console.log(`highlights: ${summary}`);
 
@@ -400,15 +317,18 @@
                 }
 
                 let displayText = targetElement.textContent + ' ';
-                for (const char of summary) {
-                    document.querySelector('#gemini-ticker').style.opacity = '1';
-                    displayText += char + '●';
-                    targetElement.textContent = displayText;
-                    await delay(1);
-                    displayText = displayText.slice(0, -1);
-                    document.querySelector('#gemini-ticker').style.opacity = '0';
-                }
+                const chunkSize = 20;
                 targetElement.textContent = displayText;
+                for (let i = 0; i < summary.length; i += chunkSize) {
+                    const chunk = summary.slice(i, i + chunkSize);
+                    const chunkSpan = document.createElement('span');
+                    chunkSpan.style.opacity = '0';
+                    chunkSpan.textContent = chunk;
+                    targetElement.appendChild(chunkSpan);
+                    await delay(100);
+                    chunkSpan.style.transition = 'opacity 1s ease-in-out';
+                    chunkSpan.style.opacity = '1';
+                }
                 return;
             } catch (error) {
                 document.querySelector('#gemini-ticker').style.opacity = '0';
@@ -419,10 +339,12 @@
     };
 
     // ########## Article ##########
-    const processArticle = async (article, links, title, url) => {
+    const processArticle = async (article, a, title, href) => {
+        console.log(`title: ${title}`);
+        console.log(`url: ${href}`);
         try {
             document.querySelector('#gemini-ticker').style.opacity = '1';
-            let summary = await GM.getValue(url);
+            let summary = await GM.getValue(href);
             if (!summary || !Object.keys(summary).length) {
                 const response = (new URL(location.href).searchParams.get('hl') == 'ja') ?
                     await fetch(apiUrl, {
@@ -431,12 +353,7 @@
                         body: JSON.stringify({
                             contents: [{
                                 parts: [{
-                                    text: `私: URLに対し、次の手順に従ってステップバイステップで実行してください。
-                                    1 URLにアクセス出来なかった場合、結果を出力しない
-                                    2 200字程度に学者のように具体的に要約
-                                    3 タイトルや見出しを含めず、結果のみを出力
-                                    ${title}のURL: ${url}
-                                    あなた:`
+                                    text: `「${title}」のニュースを200字程度に学者のように具体的に要約してください。`
                                 }],
                             }]
                         }),
@@ -447,12 +364,7 @@
                          body: JSON.stringify({
                              contents: [{
                                  parts: [{
-                                    text: `Me: Follow the steps below to execute step by step for each URL.
-                                    1 If the URL cannot be accessed, do not output the results
-                                    2 Summarize in 400 characters or so like an academic
-                                    3 Output only the results, without titles or headings
-                                    ${title} with URL: ${url}
-                                    You:`
+                                    text: `Summarize in 400 characters or so like an academic for an article: "${title}".`
                                  }],
                              }]
                          }),
@@ -484,10 +396,14 @@
                 result += decoder.decode();
 
                 const data = JSON.parse(result);
-                if (!data.candidates[0]?.content?.parts[0]?.text) return Promise.resolve();
+                if (data.error?.message || !data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                    console.error('Error:', data.error.message);
+                    consecutive429Count++;
+                    return Promise.resolve();
+                }
                 summary = data.candidates[0].content.parts[0].text.replace(/\*\*/g, '').replace(/##/g, '');
 
-                if (summary.length >= 180) await GM.setValue(url, summary);
+                if (summary.length >= 180) await GM.setValue(href, summary);
             }
             console.log(`summary: ${summary}`);
 
@@ -511,25 +427,28 @@
                 targetElement.style.marginRight = '-60px';
                 targetElement.style.whiteSpace = 'pre-wrap';
             }
-            links.forEach(link => link.setAttribute('href', url));
+            a.setAttribute('gemini-annotated', true);
 
             let displayText = targetElement.textContent + ' ';
+            const chunkSize = 20;
             const author = targetElement.parentElement.querySelector('hr ~ div > span');
             if (author) {
                 const hr = targetElement.parentElement.querySelector('hr');
                 if (hr) hr.remove();
-                displayText += '• ' + author.textContent + '  ';
+                displayText += ' ' + author.textContent + '  ';
                 author.remove();
             }
-            for (const char of summary) {
-                document.querySelector('#gemini-ticker').style.opacity = '1';
-                displayText += char + '●';
-                targetElement.textContent = displayText;
-                await delay(1);
-                displayText = displayText.slice(0, -1);
-                document.querySelector('#gemini-ticker').style.opacity = '0';
-            }
             targetElement.textContent = displayText;
+            for (let i = 0; i < summary.length; i += chunkSize) {
+                const chunk = summary.slice(i, i + chunkSize);
+                const chunkSpan = document.createElement('span');
+                chunkSpan.style.opacity = '0';
+                chunkSpan.textContent = chunk;
+                targetElement.appendChild(chunkSpan);
+                await delay(100);
+                chunkSpan.style.transition = 'opacity 1s ease-in-out';
+                chunkSpan.style.opacity = '1';
+            }
         } catch (error) {
             document.querySelector('#gemini-ticker').style.opacity = '0';
             await delay(5000);
@@ -537,9 +456,9 @@
         }
     };
 
-    const throttledProcessArticle = async (article, links, title, url, interval) => {
+    const throttledProcessArticle = async (article, a, title, href, interval) => {
         await delay(interval);
-        return processArticle(article, links, title, url);
+        return processArticle(article, a, title, href);
     };
 
     // ########## Ticker ##########
@@ -584,27 +503,17 @@
         insertSettingsElement();
         document.querySelector('#gemini-ticker').style.opacity = '1';
         const articles = Array.from(document.querySelectorAll('article'));
-        const allLinks = Array.from(document.querySelectorAll('a[href*="./read/"]'));
+        const allLinks = Array.from(document.querySelectorAll('a[href*="./read/"]:not([gemini-annotated])'));
         if (allLinks.length == 0) break;
 
-       const promiseArticles = articles.map(async (article, i) => {
-            const links = Array.from(article.querySelectorAll('a[href*="./read/"]'));
-            const targetLink = links.length > 1 ? links[links.length - 1] : links[0];
-            if (!targetLink) return Promise.resolve();
-            const href = targetLink.getAttribute('href');
-            const title = targetLink.textContent;
-            const url = await getExtractedURL(href);
-            console.log(`title: ${title}`);
-            console.log(`url: ${url}`);
-            if (!url) return Promise.resolve();
-
-            return throttledProcessArticle(article, links, title, url, i * 500);
+        const promiseArticles = articles.filter(a => a.querySelectorAll('a:not([gemini-annotated])').length).map(async (article, i) => {
+            const a = Array.from(article.querySelectorAll('a:not([gemini-annotated])')).filter(a => a.textContent.length)[0];
+            if (!a) return Promise.resolve();
+            const href = a.getAttribute('href');
+            const title = a.textContent;
+            return throttledProcessArticle(article, a, title, href, i * 500);
         });
-
         await Promise.all(promiseArticles);
-        token = '';
-        timestamp = '';
-        signature = '';
 
         insertSettingsElement();
 
@@ -615,11 +524,9 @@
 
         if (!document.querySelector('#gemini-highlight')) {
             const urls = articles.map(article => {
-                const links = Array.from(article.querySelectorAll('a'));
-                const targetLink = links.length > 1 ? links[links.length - 1] : links[0];
-                if (!targetLink) return null;
-                const href = targetLink.getAttribute('href');
-                const title = targetLink.textContent;
+                const a = Array.from(article.querySelectorAll('a')).filter(a => a.textContent.length)[0];
+                const href = a.getAttribute('href');
+                const title = a.textContent;
                 return `${title}: ${href}`;
             }).filter(Boolean).join(' ');
             console.log(`highlight: ${urls}`)
