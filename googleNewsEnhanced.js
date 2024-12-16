@@ -1,7 +1,7 @@
 // ==UserScript==
 // @match           https://news.google.com/*
 // @name            Google News Enhanced via Gemini AI
-// @version         3.8
+// @version         4.0
 // @license         MIT
 // @namespace       djshigel
 // @description  Google News with AI-Generated Annotation via Gemini
@@ -16,7 +16,7 @@
         GEMINI_API_KEY = window.prompt('Get Generative Language Client API key from Google AI Studio\nhttps://ai.google.dev/aistudio', '');
         await GM.setValue("GEMINI_API_KEY", GEMINI_API_KEY);
     }
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`;
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
     let consecutive429Count = 0;
     let token = '';
@@ -53,9 +53,22 @@
     // ########## Extract URL ##########
     const fetchRedirectPage = async (href) => {
         try {
-            const response = await fetch(`${window.location.origin}${window.location.pathname.substring(0, window.location.pathname.indexOf('/', 3))}/rss/articles/${href}`);
+            const response = await fetch(`${window.location.origin}${window.location.pathname.substring(0, window.location.pathname.indexOf('/', 3))}/read/${href}`);
             if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-            const responseText = await response.text();
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let responseText = "";
+            let done = false;
+
+            while (!done) {
+                const { value, done: readerDone } = await reader.read();
+                done = readerDone;
+                if (value) {
+                    responseText += decoder.decode(value, { stream: !done });
+                }
+            }
+
             const parser = new DOMParser();
             return parser.parseFromString(responseText, 'text/html');
         } catch (error) {
@@ -91,7 +104,7 @@
                 if(!token || !timestamp || !signature) {
                     const redirectPage = await fetchRedirectPage(href);
                     if (!redirectPage.querySelector('script#_ij') || !redirectPage.querySelector('c-wiz>div')) continue;
-                    token = redirectPage.querySelector('script#_ij').textContent.match(/[A-Za-z0-9]{25,35}:[0-9]{10,15}/);
+                    token = redirectPage.querySelector('script#_ij').textContent.match(/[A-Za-z0-9_-]{25,35}:[0-9]{10,15}/);
                     if (!token) continue;
                     token = token[0];
                     signature = redirectPage.querySelector('c-wiz>div').getAttribute('data-n-a-sg');
