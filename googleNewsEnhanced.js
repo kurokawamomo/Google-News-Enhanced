@@ -1,7 +1,7 @@
 // ==UserScript==
 // @match           https://news.google.com/*
 // @name            Google News Enhanced via Gemini AI
-// @version         5.2
+// @version         5.3
 // @license         MIT
 // @namespace       djshigel
 // @description  Google News with AI-Generated Annotation via Gemini
@@ -100,9 +100,9 @@
                                 parts: [{
                                     text: `私: 次の手順に従ってステップバイステップで実行してください。返事や番号は不要です。
                                 1 URLにアクセス出来なかった場合、結果を出力しない
-                                2 ${geo}の地域における、${(new Date).toString()}の天気に関する情報を抽出
+                                2 ${geo}の具体的な市町村名から、${(new Date).toString()}の天気に関する情報を抽出
                                 3 どのように過ごすべきかを含め、200字程度に具体的に要約
-                                4 タイトルや見出しを含めず、結果のみ出力
+                                4 タイトルと見出しと位置情報は含めず、結果のみ出力
                                 あなた:`
                                 }],
                             }]
@@ -116,9 +116,9 @@
                                 parts: [{
                                     text: `Me: Follow the steps below to execute step by step for each URL. No reply or number needed.
                                 1 If the URL cannot be accessed, do not output the results
-                                2 Extract weather information from ${(new Date).toString()} at ${geo}
+                                2 Extract weather information for ${(new Date).toString()} from specific city or town names in ${geo}
                                 3 Summarize in detail (about 200 characters) including how to spend the day
-                                4 Output only the results, without titles or headings
+                                4 Output only the results, without titles, headings or geolocation coordinates
                                 You:`
                                 }],
                             }]
