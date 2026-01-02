@@ -1,7 +1,7 @@
 // ==UserScript==
 // @match           https://news.google.com/*
 // @name            Google News Enhanced via Gemini AI
-// @version         5.6
+// @version         5.9
 // @license         MIT
 // @namespace       djshigel
 // @description  Google News with AI-Generated Annotation via Gemini
@@ -104,7 +104,8 @@
                                 3 タイトルと見出しと位置情報は含めず、結果のみ出力
                                 あなた:`
                                 }],
-                            }]
+                            }],
+                            tools: [{ googleSearch: {} }],
                         }),
                     }):
                     await fetch(apiUrl, {
@@ -119,7 +120,8 @@
                                 3 Output only the results, without titles, headings or geolocation coordinates
                                 You:`
                                 }],
-                            }]
+                            }],
+                            tools: [{ googleSearch: {} }],
                         }),
                     });
 
@@ -258,7 +260,8 @@
                                 parts: [{
                                     text: `次に示す最新のニュースの中から最も重要なニュース1つに対し5文で深堀りをどうぞ。返事や番号は不要です。 ${urls}`
                                 }],
-                            }]
+                            }],
+                            tools: [{ googleSearch: {} }],
                         }),
                     }):
                     await fetch(apiUrl, {
@@ -269,7 +272,8 @@
                                 parts: [{
                                     text: `Below, please take a eight-sentence in-depth look at one of the most important recent news stories. No reply or number needed. ${urls}`
                                 }],
-                            }]
+                            }],
+                            tools: [{ googleSearch: {} }],
                         }),
                     });
 
@@ -353,7 +357,8 @@
                                 parts: [{
                                     text: `「${title}」のニュースを200字程度に学者のように具体的に要約してください。`
                                 }],
-                            }]
+                            }],
+                            tools: [{ googleSearch: {} }],
                         }),
                     }):
                     await fetch(apiUrl, {
@@ -364,7 +369,8 @@
                                  parts: [{
                                     text: `Summarize in 400 characters or so like an academic for an article: "${title}".`
                                  }],
-                             }]
+                             }],
+                             tools: [{ googleSearch: {} }],
                          }),
                      });
 
@@ -500,7 +506,7 @@
         console.log(`######## attempt: ${j+1} ########`)
         insertSettingsElement();
         document.querySelector('#gemini-ticker').style.opacity = '1';
-        const articles = Array.from(document.querySelectorAll('article'));
+        const articles = Array.from(document.querySelectorAll('div[jsdata][ve-visible]'));
         const allLinks = Array.from(document.querySelectorAll('a[href*="./read/"]:not([gemini-annotated])'));
         if (allLinks.length == 0) break;
 
@@ -509,7 +515,7 @@
             if (!a) return Promise.resolve();
             const href = a.getAttribute('href');
             const title = a.textContent;
-            return throttledProcessArticle(article, a, title, href, i * 500);
+            return throttledProcessArticle(article, a, title, href, i * 2000);
         });
         await Promise.all(promiseArticles);
 
